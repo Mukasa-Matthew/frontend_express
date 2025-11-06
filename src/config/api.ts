@@ -1,8 +1,7 @@
 // API Configuration
-// Use relative paths for production (Nginx proxy), or absolute URL for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-console.log('🔧 API_BASE_URL:', API_BASE_URL || '(using relative paths)');
-console.log('🔧 VITE_API_URL env:', import.meta.env.VITE_API_URL || '(not set)');
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+console.log('🔧 API_BASE_URL:', API_BASE_URL);
+console.log('🔧 VITE_API_URL env:', import.meta.env.VITE_API_URL);
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,

@@ -66,9 +66,41 @@ export const login = async (
     body: JSON.stringify({ identifier, password, cf_turnstile_token: cfTurnstileToken || undefined }),
   });
 
-  const data: LoginResponse = await response.json();
+  // Safely parse JSON response
+  const responseText = await response.text();
+  
+  // Check if response is ok
+  if (!response.ok) {
+    let errorMessage = 'Login failed';
+    if (responseText && responseText.trim() !== '') {
+      try {
+        const errorData = JSON.parse(responseText);
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        errorMessage = responseText || `Server error: ${response.status} ${response.statusText}`;
+      }
+    } else {
+      errorMessage = `Server error: ${response.status} ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
 
-  if (!response.ok || !(data as any).success) {
+  // Check if response is empty
+  if (!responseText || responseText.trim() === '') {
+    throw new Error('Empty response from server');
+  }
+
+  // Parse JSON
+  let data: LoginResponse;
+  try {
+    data = JSON.parse(responseText);
+  } catch (error) {
+    console.error('Invalid JSON response:', responseText);
+    throw new Error('Invalid response from server. Please check your server configuration.');
+  }
+
+  // Check if login was successful
+  if (!(data as any).success) {
     const msg = (data as any)?.message || 'Login failed';
     throw new Error(msg);
   }
