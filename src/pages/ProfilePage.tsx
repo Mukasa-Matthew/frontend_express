@@ -182,7 +182,7 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <ProfilePictureUpload
-                onUploadSuccess={(profilePicture) => {
+                onUploadSuccess={() => {
                   // Success is already handled by ProfilePictureUpload component
                 }}
                 onUploadError={(error) => setError(error)}

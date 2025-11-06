@@ -16,8 +16,7 @@ import {
   User,
   CreditCard,
   Calendar,
-  Mail,
-  Lock
+  Mail
 } from 'lucide-react';
 
 interface SidebarProps {

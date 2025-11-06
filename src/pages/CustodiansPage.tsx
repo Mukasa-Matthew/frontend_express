@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
-import { Users, Plus, Edit, Trash2, Mail, Phone, AlertCircle, Eye } from 'lucide-react';
+import { Users, Plus, Mail, Phone, AlertCircle, Eye } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 

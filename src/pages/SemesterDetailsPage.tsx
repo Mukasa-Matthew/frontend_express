@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
-import { ArrowLeft, Users, TrendingUp, DollarSign, AlertCircle, Calendar, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Users, TrendingUp, DollarSign, AlertCircle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -51,7 +51,7 @@ interface SemesterEnrollment {
 export default function SemesterDetailsPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  useAuth();
   const [semester, setSemester] = useState<Semester | null>(null);
   const [stats, setStats] = useState<SemesterStats | null>(null);
   const [enrollments, setEnrollments] = useState<SemesterEnrollment[]>([]);

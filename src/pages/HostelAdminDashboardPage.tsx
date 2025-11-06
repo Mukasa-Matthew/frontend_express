@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Building2, Users, Bed, TrendingUp, AlertCircle, AlertTriangle, CreditCard } from 'lucide-react';
+import { Users, Bed, TrendingUp, AlertCircle, AlertTriangle, CreditCard } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SemesterSelector } from '@/components/SemesterSelector';
 
@@ -263,9 +263,9 @@ export default function HostelAdminDashboardPage() {
                   {stats.plan_name || 'N/A'}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats.days_until_expiry !== null && stats.days_until_expiry >= 0 
+                  {stats.days_until_expiry !== null && stats.days_until_expiry !== undefined && stats.days_until_expiry >= 0 
                     ? `${Math.ceil(stats.days_until_expiry)} days left`
-                    : stats.days_until_expiry !== null 
+                    : stats.days_until_expiry !== null && stats.days_until_expiry !== undefined
                       ? 'Expired'
                       : 'No subscription'
                   }

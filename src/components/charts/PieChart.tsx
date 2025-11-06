@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 export interface PieDatum {
@@ -27,7 +26,7 @@ export default function PieChart({ data, colors = ["#22c55e", "#e5e7eb", "#3b82f
         <ResponsiveContainer width="100%" height="100%">
           <RePieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <Pie data={normalized} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={2}>
-              {normalized.map((entry, index) => (
+              {normalized.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
               ))}
             </Pie>

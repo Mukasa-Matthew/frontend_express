@@ -5,6 +5,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  username?: string;
   role: 'super_admin' | 'hostel_admin' | 'tenant' | 'user' | 'custodian';
   hostel_id?: number;
   profile_picture?: string | null;

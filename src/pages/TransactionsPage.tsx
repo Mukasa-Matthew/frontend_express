@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Download, DollarSign, Calendar, User, AlertCircle } from 'lucide-react';
+import { Search, DollarSign, User, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SemesterSelector } from '@/components/SemesterSelector';
 

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
-import { Calendar, Plus, Edit, Trash2, Users, TrendingUp, Clock, AlertCircle, BookOpen, Building2, Search } from 'lucide-react';
+import { Calendar, Plus, Trash2, AlertCircle, BookOpen, Building2, Search } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 
