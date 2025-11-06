@@ -105,23 +105,23 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-2">Platform overview and statistics</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Platform overview and statistics</p>
         </div>
 
         {/* Welcome Message */}
         <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
-          <AlertCircle className="h-5 w-5 text-blue-600" />
+          <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
           <AlertDescription className="text-blue-900">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">{greeting.emoji}</span>
-              <div>
-                <strong className="text-lg">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3">
+              <span className="text-xl sm:text-2xl flex-shrink-0">{greeting.emoji}</span>
+              <div className="min-w-0 flex-1">
+                <strong className="text-base sm:text-lg block">
                   {greeting.text}, {displayName}! {greeting.icon}
                 </strong>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-xs sm:text-sm text-blue-700 mt-1">
                   👋 Welcome back to your dashboard! Here's what's happening today.
                 </p>
               </div>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
         </Alert>
 
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {/* Hostels Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

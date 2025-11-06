@@ -9,8 +9,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <Sidebar />
-      <main className="flex-1 overflow-auto ml-0 md:ml-64 transition-all duration-300">
-        <div className="p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 overflow-auto ml-0 md:ml-64 lg:ml-72 transition-all duration-300 w-full">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
           {children}
         </div>
       </main>

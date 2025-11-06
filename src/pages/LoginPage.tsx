@@ -53,7 +53,7 @@ export default function LoginPage() {
   const isCaptchaEnabled = !!siteKey && import.meta.env.VITE_DISABLE_TURNSTILE !== 'true';
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative py-8 px-4 sm:py-12 sm:px-6 lg:px-8 overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center relative py-4 px-4 sm:py-8 sm:px-6 lg:py-12 lg:px-8 overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed" 
            style={{
@@ -65,18 +65,18 @@ export default function LoginPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/[0.02] via-purple-900/[0.02] to-blue-900/[0.02]"></div>
       
       {/* Content */}
-      <div className="relative z-10 w-full max-w-md space-y-6 sm:space-y-8">
+      <div className="relative z-10 w-full max-w-md space-y-4 sm:space-y-6 lg:space-y-8 px-2">
         {/* Brand Header */}
         <div className="text-center animate-fade-in">
-          <div className="mx-auto h-24 w-24 rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-600 flex items-center justify-center mb-6 shadow-2xl backdrop-blur-sm border-2 border-white/30 animate-bounce-gentle">
-            <span className="text-4xl font-bold text-white">R</span>
+          <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-600 to-blue-600 flex items-center justify-center mb-4 sm:mb-6 shadow-2xl backdrop-blur-sm border-2 border-white/30 animate-bounce-gentle">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">R</span>
           </div>
-          <h1 className="text-5xl sm:text-6xl font-bold text-white drop-shadow-lg">RooMio</h1>
-          <p className="text-blue-100 mt-3 text-lg font-medium">Modern Hostel Management</p>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white drop-shadow-lg">RooMio</h1>
+          <p className="text-blue-100 mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg font-medium">Modern Hostel Management</p>
         </div>
 
         {/* Glass Morphism Login Card */}
-        <div className="backdrop-blur-xl bg-white/10 border border-white/30 rounded-3xl shadow-2xl p-8 animate-fade-in hover:bg-white/15 transition-all">
+        <div className="backdrop-blur-xl bg-white/10 border border-white/30 rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 lg:p-8 animate-fade-in hover:bg-white/15 transition-all">
           <div className="space-y-1 pb-6 text-center">
             <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
             <p className="text-blue-100 mt-2">Sign in to your account to continue</p>
