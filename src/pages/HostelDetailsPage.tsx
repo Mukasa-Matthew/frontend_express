@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_CONFIG, getAuthHeaders, getAuthHeadersForUpload } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
+import { CredentialsDialog } from '@/components/CredentialsDialog';
 import { 
   Building2, Mail, Phone, MapPin, Users, Bed, Calendar, AlertCircle, ArrowLeft,
-  Upload, X, Star, Image as ImageIcon, Globe, Map, Save, Loader2
+  Upload, X, Star, Image as ImageIcon, Globe, Map, Save, Loader2, Key
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -70,6 +71,10 @@ export default function HostelDetailsPage() {
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [isPublished, setIsPublished] = useState(false);
+  
+  // Credentials state
+  const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -252,6 +257,44 @@ export default function HostelDetailsPage() {
   const getImageUrl = (imageUrl: string) => {
     if (imageUrl.startsWith('http')) return imageUrl;
     return `${API_CONFIG.BASE_URL}${imageUrl}`;
+  };
+
+  const handleViewCredentials = async () => {
+    if (!id) return;
+    
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.VIEW_CREDENTIALS}/${id}/view-credentials?generate=true`, {
+        headers: getAuthHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.data?.credentials) {
+        const creds = data.data.credentials;
+        // Log credentials to console for super admin
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔐 HOSTEL ADMIN CREDENTIALS (SUPER ADMIN VIEW)');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log(`Hostel: ${hostel?.name || data.data.hostel?.name || 'N/A'}`);
+        console.log(`Admin: ${hostel?.admin?.name || data.data.admin?.name || 'N/A'}`);
+        console.log(`Email: ${hostel?.admin?.email || data.data.admin?.email || 'N/A'}`);
+        console.log('───────────────────────────────────────────────────────');
+        console.log(`Username/Email: ${creds.username}`);
+        console.log(`Password: ${creds.password}`);
+        console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('💡 These credentials are also displayed in the dialog');
+        console.log('═══════════════════════════════════════════════════════');
+        
+        setCredentials(creds);
+        setCredentialsDialogOpen(true);
+      } else {
+        alert(data.message || 'Failed to retrieve credentials');
+      }
+    } catch (err) {
+      console.error('Error viewing credentials:', err);
+      alert('Failed to retrieve credentials');
+    }
   };
 
   if (isLoading) {
@@ -629,10 +672,21 @@ export default function HostelDetailsPage() {
           </Card>
 
           {/* Admin Information */}
-          {hostel.admin && (
+          {hostel.admin && isSuperAdmin && (
             <Card>
               <CardHeader>
-                <CardTitle>Admin Information</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Admin Information</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewCredentials()}
+                    title="View Admin Credentials"
+                  >
+                    <Key className="h-4 w-4 mr-2" />
+                    View Credentials
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-3">
@@ -691,6 +745,16 @@ export default function HostelDetailsPage() {
             </Card>
           )}
         </div>
+
+        <CredentialsDialog
+          open={credentialsDialogOpen}
+          onOpenChange={setCredentialsDialogOpen}
+          credentials={credentials}
+          title={`Credentials for ${hostel.name} Admin`}
+          description="These are the temporary login credentials. Please save them securely."
+          userName={hostel.admin?.name}
+          userEmail={hostel.admin?.email}
+        />
       </div>
     </Layout>
   );

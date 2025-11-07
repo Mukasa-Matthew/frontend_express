@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
-import { Users, Plus, Mail, Phone, AlertCircle, Eye } from 'lucide-react';
+import { CredentialsDialog } from '@/components/CredentialsDialog';
+import { Users, Plus, Mail, Phone, AlertCircle, Eye, Key } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -28,6 +29,8 @@ export default function CustodiansPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustodian, setSelectedCustodian] = useState<Custodian | null>(null);
+  const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -72,8 +75,45 @@ export default function CustodiansPage() {
     setIsViewDialogOpen(true);
   };
 
+  const handleViewCredentials = async (id: number) => {
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.CUSTODIANS.VIEW_CREDENTIALS}/${id}/view-credentials?generate=true`, {
+        headers: getAuthHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.data?.credentials) {
+        const creds = data.data.credentials;
+        const custodian = custodians.find(c => c.id === id);
+        // Log credentials to console for hostel admin
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔐 CUSTODIAN CREDENTIALS (HOSTEL ADMIN VIEW)');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log(`Custodian: ${custodian?.name || data.data.custodian?.name || 'N/A'}`);
+        console.log(`Email: ${custodian?.email || data.data.custodian?.email || 'N/A'}`);
+        console.log('───────────────────────────────────────────────────────');
+        console.log(`Username/Email: ${creds.username}`);
+        console.log(`Password: ${creds.password}`);
+        console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('💡 These credentials are also displayed in the dialog');
+        console.log('═══════════════════════════════════════════════════════');
+        
+        setCredentials(creds);
+        setSelectedCustodian(custodian || null);
+        setCredentialsDialogOpen(true);
+      } else {
+        alert(data.message || 'Failed to retrieve credentials');
+      }
+    } catch (err) {
+      console.error('Error viewing credentials:', err);
+      alert('Failed to retrieve credentials');
+    }
+  };
+
   const handleResendCredentials = async (id: number) => {
-    if (!confirm('Resend login credentials to this custodian?')) {
+    if (!confirm('This will generate new credentials and send them via email. Continue?')) {
       return;
     }
 
@@ -86,7 +126,30 @@ export default function CustodiansPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert('Credentials resent successfully!');
+        if (data.data?.credentials) {
+          const creds = data.data.credentials;
+          const custodian = custodians.find(c => c.id === id);
+          // Log credentials to console for hostel admin
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('🔐 NEW CUSTODIAN CREDENTIALS (HOSTEL ADMIN VIEW)');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log(`Custodian: ${custodian?.name || data.data.custodian?.name || 'N/A'}`);
+          console.log(`Email: ${custodian?.email || data.data.custodian?.email || 'N/A'}`);
+          console.log('───────────────────────────────────────────────────────');
+          console.log(`Username/Email: ${creds.username}`);
+          console.log(`Password: ${creds.password}`);
+          console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('💡 These credentials are also displayed in the dialog');
+          console.log('═══════════════════════════════════════════════════════');
+          
+          // Show credentials in dialog
+          setCredentials(creds);
+          setSelectedCustodian(custodian || null);
+          setCredentialsDialogOpen(true);
+        } else {
+          alert('Credentials sent successfully via email');
+        }
       } else {
         alert(data.message || 'Failed to resend credentials');
       }
@@ -112,9 +175,41 @@ export default function CustodiansPage() {
 
       if (response.ok && data.success) {
         setIsAddDialogOpen(false);
+        // Check if credentials are in the response
+        if (data.data?.credentials) {
+          const creds = data.data.credentials;
+          // Log credentials to console for hostel admin
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('🔐 CUSTODIAN CREDENTIALS (HOSTEL ADMIN VIEW)');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log(`Custodian: ${data.data.custodian.name}`);
+          console.log(`Email: ${data.data.custodian.email}`);
+          console.log('───────────────────────────────────────────────────────');
+          console.log(`Username/Email: ${creds.username}`);
+          console.log(`Password: ${creds.password}`);
+          console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('💡 These credentials are also displayed in the dialog');
+          console.log('═══════════════════════════════════════════════════════');
+          
+          setCredentials(creds);
+          setSelectedCustodian({
+            id: data.data.custodian.id,
+            name: data.data.custodian.name,
+            email: data.data.custodian.email,
+            phone: formData.phone,
+            location: formData.location,
+            status: 'active',
+            created_at: new Date().toISOString()
+          });
+          setIsLoading(false);
+          setTimeout(() => {
+            setCredentialsDialogOpen(true);
+            console.log('🔓 Credentials dialog opened');
+          }, 100);
+        }
         setFormData({ name: '', email: '', phone: '', location: '' });
         fetchCustodians();
-        alert('Custodian added successfully! Temporary credentials have been sent via email.');
       } else {
         setError(data.message || 'Failed to add custodian');
       }
@@ -214,7 +309,7 @@ export default function CustodiansPage() {
                         <span className="text-gray-400">Location:</span>
                         <span className="text-gray-600">{custodian.location}</span>
                       </div>
-                      <div className="flex gap-2 pt-4">
+                      <div className="flex gap-2 pt-4 flex-wrap">
                         <Button
                           variant="outline"
                           size="sm"
@@ -227,10 +322,18 @@ export default function CustodiansPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleViewCredentials(custodian.id)}
+                          title="View credentials"
+                        >
+                          <Key className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleResendCredentials(custodian.id)}
                           className="flex-1"
                         >
-                          Resend Credentials
+                          Resend
                         </Button>
                       </div>
                     </CardContent>
@@ -346,6 +449,16 @@ export default function CustodiansPage() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <CredentialsDialog
+          open={credentialsDialogOpen}
+          onOpenChange={setCredentialsDialogOpen}
+          credentials={credentials}
+          title="Custodian Login Credentials"
+          description="Please save these credentials. You can copy them to share with the custodian."
+          userName={selectedCustodian?.name}
+          userEmail={selectedCustodian?.email}
+        />
       </div>
     </Layout>
   );

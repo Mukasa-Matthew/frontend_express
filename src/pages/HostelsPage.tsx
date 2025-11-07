@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
-import { Building2, Plus, Search, Eye, Trash2, AlertCircle, Clock } from 'lucide-react';
+import { Building2, Plus, Search, Eye, Trash2, AlertCircle, Clock, Key } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CredentialsDialog } from '@/components/CredentialsDialog';
 
 interface Hostel {
   id: number;
@@ -37,6 +38,9 @@ export default function HostelsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 20;
+  const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [selectedHostel, setSelectedHostel] = useState<{ id: number; name: string; admin?: { name: string; email: string } } | null>(null);
 
   // Calculate subscription statistics
   const subscriptionStats = {
@@ -113,6 +117,104 @@ export default function HostelsPage() {
     e.preventDefault();
     setPage(1);
     fetchHostels();
+  };
+
+  const handleViewCredentials = async (hostelId: number) => {
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.VIEW_CREDENTIALS}/${hostelId}/view-credentials?generate=true`, {
+        headers: getAuthHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.data?.credentials) {
+        const creds = data.data.credentials;
+        // Log credentials to console for super admin
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('🔐 HOSTEL ADMIN CREDENTIALS (SUPER ADMIN VIEW)');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log(`Hostel: ${data.data.hostel.name}`);
+        console.log(`Admin: ${data.data.admin.name}`);
+        console.log(`Email: ${data.data.admin.email}`);
+        console.log('───────────────────────────────────────────────────────');
+        console.log(`Username/Email: ${creds.username}`);
+        console.log(`Password: ${creds.password}`);
+        console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('💡 These credentials are also displayed in the dialog');
+        console.log('═══════════════════════════════════════════════════════');
+        
+        setCredentials(creds);
+        setSelectedHostel({
+          id: data.data.hostel.id,
+          name: data.data.hostel.name,
+          admin: {
+            name: data.data.admin.name,
+            email: data.data.admin.email
+          }
+        });
+        setCredentialsDialogOpen(true);
+      } else {
+        alert(data.message || 'Failed to retrieve credentials');
+      }
+    } catch (err) {
+      console.error('Error viewing credentials:', err);
+      alert('Failed to retrieve credentials');
+    }
+  };
+
+  const handleResendCredentials = async (hostelId: number) => {
+    if (!confirm('This will generate new credentials and send them via email. Continue?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.RESEND_ADMIN_CREDENTIALS}/${hostelId}/resend-credentials`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        if (data.data?.credentials) {
+          const creds = data.data.credentials;
+          // Log credentials to console for super admin
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('🔐 NEW HOSTEL ADMIN CREDENTIALS (SUPER ADMIN VIEW)');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log(`Hostel: ${data.data.hostel.name}`);
+          console.log(`Admin: ${data.data.admin.name}`);
+          console.log(`Email: ${data.data.admin.email}`);
+          console.log('───────────────────────────────────────────────────────');
+          console.log(`Username/Email: ${creds.username}`);
+          console.log(`Password: ${creds.password}`);
+          console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('💡 These credentials are also displayed in the dialog');
+          console.log('═══════════════════════════════════════════════════════');
+          
+          // Show credentials in dialog
+          setCredentials(creds);
+          setSelectedHostel({
+            id: data.data.hostel.id,
+            name: data.data.hostel.name,
+            admin: {
+              name: data.data.admin.name,
+              email: data.data.admin.email
+            }
+          });
+          setCredentialsDialogOpen(true);
+        } else {
+          alert('Credentials sent successfully via email');
+        }
+      } else {
+        alert(data.message || 'Failed to resend credentials');
+      }
+    } catch (err) {
+      console.error('Error resending credentials:', err);
+      alert('Failed to resend credentials');
+    }
   };
 
   return (
@@ -314,7 +416,7 @@ export default function HostelsPage() {
                     </div>
                   )}
 
-                  <div className="flex gap-2 pt-3">
+                  <div className="flex gap-2 pt-3 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -324,6 +426,22 @@ export default function HostelsPage() {
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Manage
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewCredentials(hostel.id)}
+                      title="View admin credentials"
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResendCredentials(hostel.id)}
+                      title="Resend credentials via email"
+                    >
+                      Resend
                     </Button>
                     <Button
                       variant="outline"
@@ -367,6 +485,16 @@ export default function HostelsPage() {
           </div>
         )}
       </div>
+
+      <CredentialsDialog
+        open={credentialsDialogOpen}
+        onOpenChange={setCredentialsDialogOpen}
+        credentials={credentials}
+        title="Hostel Admin Credentials"
+        description="Please save these credentials. You can copy them to share with the admin."
+        userName={selectedHostel?.admin?.name}
+        userEmail={selectedHostel?.admin?.email}
+      />
     </Layout>
   );
 }

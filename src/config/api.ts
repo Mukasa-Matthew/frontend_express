@@ -1,5 +1,20 @@
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Get the API URL from environment variable, handle cases where it might have multiple values
+let rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+// Handle cases where the URL might have commas, trailing commas, or extra whitespace
+if (typeof rawApiUrl === 'string') {
+  // If the URL contains a comma (multiple values), take only the first one
+  if (rawApiUrl.includes(',')) {
+    rawApiUrl = rawApiUrl.split(',')[0];
+    console.warn('⚠️  Multiple API URLs detected in VITE_API_URL. Using first one:', rawApiUrl);
+  }
+  
+  // Remove trailing commas, whitespace, and trailing slashes
+  rawApiUrl = rawApiUrl.replace(/[,/]+$/, '').trim();
+}
+
+const API_BASE_URL = rawApiUrl.trim();
 console.log('🔧 API_BASE_URL:', API_BASE_URL);
 console.log('🔧 VITE_API_URL env:', import.meta.env.VITE_API_URL);
 
@@ -56,6 +71,7 @@ export const API_CONFIG = {
       ADMIN_SUMMARY: `${API_BASE_URL}/api/hostels`,
       DELETE: `${API_BASE_URL}/api/hostels`,
       RESEND_ADMIN_CREDENTIALS: `${API_BASE_URL}/api/hostels`,
+      VIEW_CREDENTIALS: `${API_BASE_URL}/api/hostels`,
       IMAGES: {
         LIST: `${API_BASE_URL}/api/hostels`,
         UPLOAD: `${API_BASE_URL}/api/hostels`,
@@ -85,6 +101,7 @@ export const API_CONFIG = {
       UPDATE: `${API_BASE_URL}/api/custodians`,
       DELETE: `${API_BASE_URL}/api/custodians`,
       RESEND_CREDENTIALS: `${API_BASE_URL}/api/custodians`,
+      VIEW_CREDENTIALS: `${API_BASE_URL}/api/custodians`,
     },
     SEMESTERS: {
       // Global semester templates

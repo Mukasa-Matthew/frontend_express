@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
+import { CredentialsDialog } from '@/components/CredentialsDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
@@ -29,6 +30,9 @@ export default function CreateHostelPage() {
   const [error, setError] = useState('');
   const [universities, setUniversities] = useState<University[]>([]);
   const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+  const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
+  const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [createdAdmin, setCreatedAdmin] = useState<{ name: string; email: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -119,9 +123,49 @@ export default function CreateHostelPage() {
       });
 
       const data = await response.json();
+      
+      // Debug logging
+      console.log('📋 Hostel creation response:', data);
+      console.log('🔐 Credentials in response:', data.data?.credentials);
 
       if (response.ok && data.success) {
-        navigate('/hostels');
+        // Always show credentials if they're in the response
+        if (data.data?.credentials) {
+          const creds = data.data.credentials;
+          console.log('✅ Credentials found, showing dialog');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('🔐 HOSTEL ADMIN CREDENTIALS (SUPER ADMIN VIEW)');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log(`Hostel: ${data.data.hostel?.name || 'N/A'}`);
+          console.log(`Admin: ${data.data.admin?.name || formData.admin_name}`);
+          console.log(`Email: ${data.data.admin?.email || formData.admin_email}`);
+          console.log('───────────────────────────────────────────────────────');
+          console.log(`Username/Email: ${creds.username}`);
+          console.log(`Password: ${creds.password}`);
+          console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('💡 These credentials are also displayed in the dialog below');
+          console.log('═══════════════════════════════════════════════════════');
+          
+          setCredentials(creds);
+          setCreatedAdmin({
+            name: data.data.admin?.name || formData.admin_name,
+            email: data.data.admin?.email || formData.admin_email
+          });
+          // Show credentials dialog immediately - ensure it's not blocked
+          setIsLoading(false);
+          // Use setTimeout to ensure dialog renders after state updates
+          setTimeout(() => {
+            setCredentialsDialogOpen(true);
+            console.log('🔓 Credentials dialog opened');
+          }, 100);
+        } else {
+          // If no credentials in response, log and show error
+          console.error('❌ No credentials in response:', data);
+          setError('Hostel created but credentials were not returned. Please use "View Credentials" on the hostels page.');
+          // Still navigate after a delay
+          setTimeout(() => navigate('/hostels'), 3000);
+        }
       } else {
         setError(data.message || 'Failed to create hostel');
       }
@@ -357,6 +401,22 @@ export default function CreateHostelPage() {
           </div>
         </form>
       </div>
+
+      <CredentialsDialog
+        open={credentialsDialogOpen}
+        onOpenChange={(open) => {
+          setCredentialsDialogOpen(open);
+          if (!open && credentials) {
+            // After closing dialog, navigate to hostels page
+            navigate('/hostels');
+          }
+        }}
+        credentials={credentials}
+        title="Hostel Admin Credentials"
+        description="The hostel has been created successfully. Please save these credentials and share them with the admin."
+        userName={createdAdmin?.name}
+        userEmail={createdAdmin?.email}
+      />
     </Layout>
   );
 }
