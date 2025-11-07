@@ -25,7 +25,7 @@ interface CredentialsDialogProps {
   title?: string;
   description?: string;
   userName?: string;
-  userEmail?: string;
+  userEmail?: string | null;
 }
 
 export function CredentialsDialog({
