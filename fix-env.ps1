@@ -34,6 +34,25 @@ if (Test-Path $envFile) {
     Write-Host "✅ Created .env file with correct configuration"
 }
 
+# Also ensure the URL is set correctly (not localhost)
+$fixedLines = Get-Content $envFile
+$hasCorrectUrl = $false
+foreach ($line in $fixedLines) {
+    if ($line -match "^VITE_API_URL=http://64\.23\.169\.136:5000") {
+        $hasCorrectUrl = $true
+        break
+    }
+}
+
+if (-not $hasCorrectUrl) {
+    Write-Host ""
+    Write-Host "⚠️  WARNING: VITE_API_URL should be http://64.23.169.136:5000 for production"
+    Write-Host "   Removing any localhost entries..."
+    $correctedLines = $fixedLines | Where-Object { $_ -notmatch "^VITE_API_URL=http://localhost" }
+    "VITE_API_URL=http://64.23.169.136:5000" | Add-Content -Path $envFile -Force
+    Write-Host "✅ Set VITE_API_URL to http://64.23.169.136:5000"
+}
+
 Write-Host ""
 Write-Host "Next steps:"
 Write-Host "1. Verify the .env file: Get-Content .env"
