@@ -136,11 +136,15 @@ export default function ProfilePage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setPasswordSuccess('Password changed successfully! A confirmation email has been sent to your registered email address.');
+        setPasswordSuccess('✅ Password changed successfully! A confirmation email has been sent to your registered email address. Your password has been updated and you can now use your new password to log in.');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
-        setShowPasswordChange(false);
+        // Keep the form visible for a moment to show success, then hide after 3 seconds
+        setTimeout(() => {
+          setShowPasswordChange(false);
+          setPasswordSuccess('');
+        }, 5000);
       } else {
         setPasswordError(data.message || 'Failed to change password');
       }
@@ -309,9 +313,15 @@ export default function ProfilePage() {
               )}
 
               {passwordSuccess && (
-                <Alert className="border-green-500 bg-green-50">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-800">{passwordSuccess}</AlertDescription>
+                <Alert className="border-green-500 bg-green-50 animate-in fade-in-50 slide-in-from-top-5 duration-500">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <AlertDescription className="text-green-800 font-medium text-base">
+                        {passwordSuccess}
+                      </AlertDescription>
+                    </div>
+                  </div>
                 </Alert>
               )}
 
