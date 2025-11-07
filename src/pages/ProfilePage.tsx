@@ -313,16 +313,40 @@ export default function ProfilePage() {
               )}
 
               {passwordSuccess && (
-                <Alert className="border-green-500 bg-green-50 animate-in fade-in-50 slide-in-from-top-5 duration-500">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <AlertDescription className="text-green-800 font-medium text-base">
-                        {passwordSuccess}
-                      </AlertDescription>
+                <div className="relative overflow-hidden rounded-lg border-2 border-green-400 bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 shadow-lg animate-in fade-in-50 slide-in-from-top-5 duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-400/10 to-emerald-400/10 animate-pulse"></div>
+                  <div className="relative p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        <div className="rounded-full bg-green-500 p-3 shadow-lg animate-bounce">
+                          <CheckCircle2 className="h-8 w-8 text-white" />
+                        </div>
+                      </div>
+                      <div className="flex-1 pt-1">
+                        <h3 className="text-xl font-bold text-green-900 mb-2 flex items-center gap-2">
+                          <span className="animate-pulse">🎉</span>
+                          Password Changed Successfully!
+                        </h3>
+                        <p className="text-green-800 font-medium mb-3 leading-relaxed">
+                          ✅ Your password has been updated successfully!
+                        </p>
+                        <div className="bg-white/60 rounded-lg p-4 mb-3 border border-green-200">
+                          <p className="text-sm text-green-900 font-semibold mb-2">What happens next:</p>
+                          <ul className="text-sm text-green-800 space-y-1.5 list-disc list-inside">
+                            <li>A confirmation email has been sent to your registered email address</li>
+                            <li>You can now log in using your new password</li>
+                            <li>Your old password is no longer valid</li>
+                          </ul>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-green-700 bg-white/40 rounded-md px-3 py-2">
+                          <Lock className="h-4 w-4" />
+                          <span className="font-medium">Remember to use your new password for your next login</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </Alert>
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-emerald-400 to-green-500 animate-shimmer"></div>
+                </div>
               )}
 
               <div className="space-y-4">
