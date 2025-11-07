@@ -578,7 +578,7 @@ export default function CustodiansPage() {
           title="Custodian Login Credentials (Original)"
           description="These are the temporary credentials that were sent to the custodian via email. Please save them in case the email delivery fails."
           userName={selectedCustodian?.name}
-          userEmail={selectedCustodian?.email}
+          userEmail={selectedCustodian?.email ?? undefined}
         />
       </div>
     </Layout>

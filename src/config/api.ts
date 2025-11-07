@@ -100,7 +100,6 @@ export const API_CONFIG = {
       CREATE: `${API_BASE_URL}/api/custodians`,
       UPDATE: `${API_BASE_URL}/api/custodians`,
       DELETE: `${API_BASE_URL}/api/custodians`,
-      DELETE_BY_EMAIL: `${API_BASE_URL}/api/custodians/by-email`,
       RESEND_CREDENTIALS: `${API_BASE_URL}/api/custodians`,
       VIEW_CREDENTIALS: `${API_BASE_URL}/api/custodians`,
     },

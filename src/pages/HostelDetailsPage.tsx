@@ -690,7 +690,7 @@ export default function HostelDetailsPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Admin Information</CardTitle>
+                <CardTitle>Admin Information</CardTitle>
                   <Button
                     variant="outline"
                     size="sm"
