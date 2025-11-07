@@ -14,9 +14,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 interface Custodian {
   id: number;
   name: string;
-  email: string;
-  phone: string;
-  location: string;
+  email: string | null;
+  phone: string | null;
+  location: string | null;
   status: string;
   created_at: string;
 }
@@ -31,6 +31,8 @@ export default function CustodiansPage() {
   const [selectedCustodian, setSelectedCustodian] = useState<Custodian | null>(null);
   const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
+  const [existingUser, setExistingUser] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -58,7 +60,17 @@ export default function CustodiansPage() {
       const data = await response.json();
 
       if (data.success) {
-        setCustodians(data.data || []);
+        // Log the response to debug
+        console.log('Custodians API response:', data.data);
+        // Ensure email is properly mapped
+        const mappedCustodians = (data.data || []).map((c: any) => ({
+          ...c,
+          email: c.email || 'N/A',
+          phone: c.phone || 'N/A',
+          location: c.location || 'N/A'
+        }));
+        console.log('Mapped custodians:', mappedCustodians);
+        setCustodians(mappedCustodians);
       } else {
         throw new Error(data.message || 'Failed to load custodians');
       }
@@ -109,6 +121,81 @@ export default function CustodiansPage() {
     } catch (err) {
       console.error('Error viewing credentials:', err);
       alert('Failed to retrieve credentials');
+    }
+  };
+
+  const handleDeleteExistingUser = async () => {
+    if (!existingUser) return;
+    
+    if (!confirm(`Are you sure you want to delete ${existingUser.name} (${existingUser.email})? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeletingUser(true);
+    setError('');
+
+    try {
+      const encodedEmail = encodeURIComponent(existingUser.email);
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.CUSTODIANS.DELETE_BY_EMAIL}/${encodedEmail}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setError('');
+        setExistingUser(null);
+        // Retry creating the custodian with the same form data
+        setIsSubmitting(true);
+        setTimeout(async () => {
+          try {
+            const createResponse = await fetch(API_CONFIG.ENDPOINTS.CUSTODIANS.CREATE, {
+              method: 'POST',
+              headers: getAuthHeaders(),
+              body: JSON.stringify(formData)
+            });
+
+            const createData = await createResponse.json();
+
+            if (createResponse.ok && createData.success) {
+              setIsAddDialogOpen(false);
+              if (createData.data?.credentials) {
+                const creds = createData.data.credentials;
+                setCredentials(creds);
+                setSelectedCustodian({
+                  id: createData.data.custodian?.id || 0,
+                  name: createData.data.custodian?.name || formData.name,
+                  email: createData.data.custodian?.email || formData.email,
+                  phone: formData.phone,
+                  location: formData.location,
+                  status: 'active',
+                  created_at: new Date().toISOString()
+                });
+                setTimeout(() => {
+                  setCredentialsDialogOpen(true);
+                }, 100);
+              }
+              setFormData({ name: '', email: '', phone: '', location: '' });
+              fetchCustodians();
+            } else {
+              setError(createData.message || 'Failed to add custodian after deletion');
+            }
+          } catch (err) {
+            console.error('Error retrying custodian creation:', err);
+            setError('Failed to create custodian. Please try again.');
+          } finally {
+            setIsSubmitting(false);
+          }
+        }, 500);
+      } else {
+        setError(data.message || 'Failed to delete user');
+      }
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError('Failed to delete user. Please try again.');
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -175,6 +262,8 @@ export default function CustodiansPage() {
 
       if (response.ok && data.success) {
         setIsAddDialogOpen(false);
+        setError(''); // Clear any errors
+        setExistingUser(null); // Clear existing user info
         // Check if credentials are in the response
         if (data.data?.credentials) {
           const creds = data.data.credentials;
@@ -215,11 +304,22 @@ export default function CustodiansPage() {
         setFormData({ name: '', email: '', phone: '', location: '' });
         fetchCustodians();
       } else {
-        setError(data.message || 'Failed to add custodian');
+        // Handle error response - show user-friendly message
+        let errorMessage = data.message || 'Failed to add custodian';
+        
+        // If there's existing user info, make the message more informative
+        if (data.existingUser) {
+          errorMessage = `Email already in use: ${data.existingUser.email} is registered as ${data.existingUser.role} (${data.existingUser.name}).`;
+        }
+        
+        setError(errorMessage);
+        setExistingUser(data.existingUser || null); // Store existing user info for deletion
+        console.error('Failed to add custodian:', data);
+        console.error('Existing user details:', data.existingUser);
       }
     } catch (err) {
       console.error('Error adding custodian:', err);
-      setError('Failed to add custodian');
+      setError(err instanceof Error ? err.message : 'Failed to add custodian. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -268,7 +368,20 @@ export default function CustodiansPage() {
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+              <span className="flex-1">{error}</span>
+              {existingUser && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteExistingUser}
+                  disabled={isDeletingUser}
+                  className="ml-2"
+                >
+                  {isDeletingUser ? 'Deleting...' : `Delete ${existingUser.name} and Retry`}
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -303,16 +416,20 @@ export default function CustodiansPage() {
                     <CardContent className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
                         <Mail className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{custodian.email}</span>
+                        <span className="text-gray-600">{custodian.email || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-600">{custodian.phone}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Location:</span>
-                        <span className="text-gray-600">{custodian.location}</span>
-                      </div>
+                      {custodian.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span className="text-gray-600">{custodian.phone}</span>
+                        </div>
+                      )}
+                      {custodian.location && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-400">Location:</span>
+                          <span className="text-gray-600">{custodian.location}</span>
+                        </div>
+                      )}
                       <div className="flex gap-2 pt-4 flex-wrap">
                         <Button
                           variant="outline"
@@ -365,7 +482,7 @@ export default function CustodiansPage() {
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <p className="text-sm font-medium">{selectedCustodian.email}</p>
+                  <p className="text-sm font-medium">{selectedCustodian.email || 'N/A'}</p>
                 </div>
                 <div>
                   <Label>Phone</Label>

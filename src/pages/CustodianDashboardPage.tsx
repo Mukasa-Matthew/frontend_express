@@ -22,13 +22,82 @@ export default function CustodianDashboardPage() {
     total_payments: 0,
     outstanding_balance: 0,
   });
+  const [hostelName, setHostelName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
 
   useEffect(() => {
+    if (user && !isLoading) {
+      fetchHostelInfo();
+    }
+  }, [user, isLoading]);
+
+  useEffect(() => {
     fetchStats();
   }, [user, selectedSemesterId]);
+
+  const fetchHostelInfo = async () => {
+    if (!user?.id || user.role !== 'custodian') {
+      return;
+    }
+    
+    try {
+      // Try to get hostel info from the custodian's my-hostel endpoint
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/custodians/my-hostel`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('My-hostel endpoint response:', data);
+        if (data.success && data.data?.hostel_name) {
+          console.log('Setting hostel name from my-hostel endpoint:', data.data.hostel_name);
+          setHostelName(data.data.hostel_name);
+          return;
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('My-hostel endpoint failed:', response.status, errorText);
+      }
+      
+      // Fallback: try to get hostel_id from user context or profile
+      let hostelId = user.hostel_id;
+      
+      if (!hostelId) {
+        try {
+          const profileResponse = await fetch(API_CONFIG.ENDPOINTS.AUTH.PROFILE, {
+            headers: getAuthHeaders()
+          });
+          
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            if (profileData.success && profileData.user?.hostel_id) {
+              hostelId = profileData.user.hostel_id;
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching profile:', err);
+        }
+      }
+      
+      // If we have hostel_id, fetch hostel details
+      if (hostelId) {
+        const hostelResponse = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.GET}/${hostelId}`, {
+          headers: getAuthHeaders()
+        });
+        
+        if (hostelResponse.ok) {
+          const hostelData = await hostelResponse.json();
+          if (hostelData.success && hostelData.hostel?.name) {
+            setHostelName(hostelData.hostel.name);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching hostel info:', err);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -131,7 +200,14 @@ export default function CustodianDashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Custodian Dashboard</h1>
-            <p className="text-sm md:text-base text-gray-600 mt-2">Overview of your hostel operations</p>
+            {hostelName ? (
+              <div className="flex items-center gap-2 mt-2">
+                <p className="text-sm md:text-base text-gray-600">Custodian -</p>
+                <p className="text-sm md:text-base font-semibold text-indigo-600">{hostelName}</p>
+              </div>
+            ) : (
+              <p className="text-sm md:text-base text-gray-600 mt-2">Overview of your hostel operations</p>
+            )}
           </div>
           <SemesterSelector 
             hostelId={user?.hostel_id || null}
@@ -139,11 +215,22 @@ export default function CustodianDashboardPage() {
           />
         </div>
 
-        {/* Welcome Message */}
-        <Alert className="bg-blue-50 border-blue-200">
-          <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <strong>{greeting.emoji} {greeting.text}, {displayName}!</strong> Welcome back to your dashboard.
+        {/* Welcome Message with Hostel Assignment */}
+        <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <AlertCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-900">
+            <div className="flex flex-col gap-2">
+              <div>
+                <strong>{greeting.emoji} {greeting.text}, {displayName}!</strong> Welcome back to your dashboard.
+              </div>
+              {hostelName && (
+                <div className="mt-2 pt-2 border-t border-green-200">
+                  <p className="text-sm font-semibold text-green-800">
+                    🏠 Assigned Hostel: <span className="text-green-700">{hostelName}</span>
+                  </p>
+                </div>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
 

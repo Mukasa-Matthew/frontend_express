@@ -134,24 +134,43 @@ export default function HostelAdminDashboardPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Hostel Dashboard</h1>
-            {stats && (
-              <p className="text-gray-600 mt-2">
-                {stats.hostel_name}
-                {stats.university_name && ` - ${stats.university_name}`}
-              </p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Hostel Dashboard</h1>
+            {stats?.hostel_name ? (
+              <div className="flex items-center gap-2 mt-2">
+                <p className="text-sm md:text-base text-gray-600">Admin -</p>
+                <p className="text-sm md:text-base font-semibold text-indigo-600">{stats.hostel_name}</p>
+                {stats.university_name && (
+                  <p className="text-sm md:text-base text-gray-500">({stats.university_name})</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm md:text-base text-gray-600 mt-2">Overview of your hostel operations</p>
             )}
           </div>
           {user?.hostel_id && <SemesterSelector hostelId={user.hostel_id} />}
         </div>
 
-        {/* Welcome Message */}
-        <Alert className="bg-blue-50 border-blue-200">
+        {/* Welcome Message with Hostel Assignment */}
+        <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            <strong>{greeting.emoji} {greeting.text}, {displayName}!</strong> Welcome back to your dashboard.
+          <AlertDescription className="text-blue-900">
+            <div className="flex flex-col gap-2">
+              <div>
+                <strong>{greeting.emoji} {greeting.text}, {displayName}!</strong> Welcome back to your dashboard.
+              </div>
+              {stats?.hostel_name && (
+                <div className="mt-2 pt-2 border-t border-blue-200">
+                  <p className="text-sm font-semibold text-blue-800">
+                    🏠 Assigned Hostel: <span className="text-blue-700">{stats.hostel_name}</span>
+                    {stats.university_name && (
+                      <span className="text-blue-600"> - {stats.university_name}</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
 
