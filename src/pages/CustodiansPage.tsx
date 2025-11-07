@@ -182,31 +182,35 @@ export default function CustodiansPage() {
           console.log('═══════════════════════════════════════════════════════');
           console.log('🔐 CUSTODIAN CREDENTIALS (HOSTEL ADMIN VIEW)');
           console.log('═══════════════════════════════════════════════════════');
-          console.log(`Custodian: ${data.data.custodian.name}`);
-          console.log(`Email: ${data.data.custodian.email}`);
+          console.log(`Custodian: ${data.data.custodian?.name || 'N/A'}`);
+          console.log(`Email: ${data.data.custodian?.email || 'N/A'}`);
           console.log('───────────────────────────────────────────────────────');
           console.log(`Username/Email: ${creds.username}`);
           console.log(`Password: ${creds.password}`);
           console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
           console.log('═══════════════════════════════════════════════════════');
-          console.log('💡 These credentials are also displayed in the dialog');
+          console.log('💡 These are the ORIGINAL credentials sent to the custodian via email');
           console.log('═══════════════════════════════════════════════════════');
           
           setCredentials(creds);
           setSelectedCustodian({
-            id: data.data.custodian.id,
-            name: data.data.custodian.name,
-            email: data.data.custodian.email,
+            id: data.data.custodian?.id || 0,
+            name: data.data.custodian?.name || formData.name,
+            email: data.data.custodian?.email || formData.email,
             phone: formData.phone,
             location: formData.location,
             status: 'active',
             created_at: new Date().toISOString()
           });
-          setIsLoading(false);
+          // Use setTimeout to ensure dialog renders after state updates
           setTimeout(() => {
             setCredentialsDialogOpen(true);
-            console.log('🔓 Credentials dialog opened');
+            console.log('🔓 Credentials dialog opened with ORIGINAL credentials');
           }, 100);
+        } else {
+          // If no credentials in response, log and show warning
+          console.warn('⚠️ No credentials in response:', data);
+          alert('Custodian created successfully, but credentials were not returned. Please use "View Credentials" to see them.');
         }
         setFormData({ name: '', email: '', phone: '', location: '' });
         fetchCustodians();
@@ -454,8 +458,8 @@ export default function CustodiansPage() {
           open={credentialsDialogOpen}
           onOpenChange={setCredentialsDialogOpen}
           credentials={credentials}
-          title="Custodian Login Credentials"
-          description="Please save these credentials. You can copy them to share with the custodian."
+          title="Custodian Login Credentials (Original)"
+          description="These are the temporary credentials that were sent to the custodian via email. Please save them in case the email delivery fails."
           userName={selectedCustodian?.name}
           userEmail={selectedCustodian?.email}
         />
