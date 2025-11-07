@@ -194,11 +194,10 @@ export function CredentialsDialog({
               </div>
             )}
 
-            <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-              <p className="text-sm text-blue-800">
-                <strong>🔐 Super Admin Access:</strong> As the super admin, you can view and copy these credentials. 
-                Please save them securely and share with the admin/custodian via a secure method. 
-                The password cannot be retrieved again once you close this dialog.
+            <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+              <p className="text-sm text-green-800">
+                <strong>✅ Original Credentials:</strong> These are the exact temporary credentials that were generated and sent to the admin via email. 
+                Please save them securely. The original password cannot be retrieved again once you close this dialog.
               </p>
             </div>
           </div>

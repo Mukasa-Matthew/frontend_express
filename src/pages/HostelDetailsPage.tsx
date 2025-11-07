@@ -262,6 +262,13 @@ export default function HostelDetailsPage() {
   const handleViewCredentials = async () => {
     if (!id) return;
     
+    // Show confirmation that this will generate NEW credentials (not show original ones)
+    const confirmMessage = `Original credentials cannot be retrieved (passwords are securely hashed).\n\nDo you want to GENERATE NEW credentials? This will update the admin's password.\n\nTo send new credentials via email instead, use the "Resend Credentials" button on the hostels list page.`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.VIEW_CREDENTIALS}/${id}/view-credentials?generate=true`, {
         headers: getAuthHeaders()
@@ -269,25 +276,32 @@ export default function HostelDetailsPage() {
 
       const data = await response.json();
 
-      if (response.ok && data.success && data.data?.credentials) {
-        const creds = data.data.credentials;
-        // Log credentials to console for super admin
-        console.log('═══════════════════════════════════════════════════════');
-        console.log('🔐 HOSTEL ADMIN CREDENTIALS (SUPER ADMIN VIEW)');
-        console.log('═══════════════════════════════════════════════════════');
-        console.log(`Hostel: ${hostel?.name || data.data.hostel?.name || 'N/A'}`);
-        console.log(`Admin: ${hostel?.admin?.name || data.data.admin?.name || 'N/A'}`);
-        console.log(`Email: ${hostel?.admin?.email || data.data.admin?.email || 'N/A'}`);
-        console.log('───────────────────────────────────────────────────────');
-        console.log(`Username/Email: ${creds.username}`);
-        console.log(`Password: ${creds.password}`);
-        console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
-        console.log('═══════════════════════════════════════════════════════');
-        console.log('💡 These credentials are also displayed in the dialog');
-        console.log('═══════════════════════════════════════════════════════');
-        
-        setCredentials(creds);
-        setCredentialsDialogOpen(true);
+      if (response.ok && data.success) {
+        if (data.data?.credentials) {
+          const creds = data.data.credentials;
+          // Log credentials to console for super admin
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('🔐 NEW HOSTEL ADMIN CREDENTIALS (GENERATED)');
+          console.log('═══════════════════════════════════════════════════════');
+          console.log(`Hostel: ${hostel?.name || data.data.hostel?.name || 'N/A'}`);
+          console.log(`Admin: ${hostel?.admin?.name || data.data.admin?.name || 'N/A'}`);
+          console.log(`Email: ${hostel?.admin?.email || data.data.admin?.email || 'N/A'}`);
+          console.log('───────────────────────────────────────────────────────');
+          console.log(`Username/Email: ${creds.username}`);
+          console.log(`Password: ${creds.password}`);
+          console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
+          console.log('═══════════════════════════════════════════════════════');
+          console.log('⚠️  These are NEW credentials. Original credentials cannot be retrieved.');
+          console.log('═══════════════════════════════════════════════════════');
+          
+          setCredentials(creds);
+          setCredentialsDialogOpen(true);
+        } else if (data.data?.note) {
+          // Show info message that original credentials can't be retrieved
+          alert(`${data.message}\n\n${data.data.note}`);
+        } else {
+          alert(data.message || 'Failed to retrieve credentials');
+        }
       } else {
         alert(data.message || 'Failed to retrieve credentials');
       }

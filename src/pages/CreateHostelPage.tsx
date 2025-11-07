@@ -144,7 +144,7 @@ export default function CreateHostelPage() {
           console.log(`Password: ${creds.password}`);
           console.log(`Login URL: ${creds.loginUrl || 'N/A'}`);
           console.log('═══════════════════════════════════════════════════════');
-          console.log('💡 These credentials are also displayed in the dialog below');
+          console.log('💡 These are the ORIGINAL credentials sent to the admin via email');
           console.log('═══════════════════════════════════════════════════════');
           
           setCredentials(creds);
@@ -157,7 +157,7 @@ export default function CreateHostelPage() {
           // Use setTimeout to ensure dialog renders after state updates
           setTimeout(() => {
             setCredentialsDialogOpen(true);
-            console.log('🔓 Credentials dialog opened');
+            console.log('🔓 Credentials dialog opened with ORIGINAL credentials');
           }, 100);
         } else {
           // If no credentials in response, log and show error
@@ -412,8 +412,8 @@ export default function CreateHostelPage() {
           }
         }}
         credentials={credentials}
-        title="Hostel Admin Credentials"
-        description="The hostel has been created successfully. Please save these credentials and share them with the admin."
+        title="Hostel Admin Credentials (Original)"
+        description="These are the ORIGINAL temporary credentials generated and sent to the admin via email. Save them securely - they cannot be retrieved again."
         userName={createdAdmin?.name}
         userEmail={createdAdmin?.email}
       />
