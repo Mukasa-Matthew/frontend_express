@@ -104,7 +104,10 @@ export default function ExpensesPage() {
     expense.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalAmount = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0);
+  const totalAmount = filteredExpenses.reduce(
+    (sum, expense) => sum + (typeof expense.amount === 'number' ? expense.amount : Number(expense.amount) || 0),
+    0
+  );
 
   if (!user?.hostel_id) {
     return (

@@ -66,15 +66,15 @@ export default function ChangePasswordPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setSuccess('✅ Password changed successfully! A confirmation email has been sent to your registered email address. You will be redirected to your profile page shortly.');
+        setSuccess('✅ Password changed successfully! We just emailed you a confirmation.');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         
-        // Redirect after 5 seconds to give user time to see the success message
+        // Redirect after a short delay so the user can read the success message
         setTimeout(() => {
           navigate('/profile');
-        }, 5000);
+        }, 2500);
       } else {
         setError(data.message || 'Failed to change password');
       }
