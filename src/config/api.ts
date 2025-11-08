@@ -1,6 +1,38 @@
 // API Configuration
 // Get the API URL from environment variable, handle cases where it might have multiple values
-let rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+let rawApiUrl = import.meta.env.VITE_API_URL;
+
+const inferApiUrlFromWindow = (): string | null => {
+  if (typeof window === 'undefined') return null;
+
+  const { protocol, hostname, port } = window.location;
+  const defaultBackendPort = import.meta.env.VITE_API_PORT || '5000';
+  const isLoopbackHost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const hasExplicitPort = Boolean(port);
+
+  // If frontend already sits on backend port, reuse it
+  if (hasExplicitPort && port === defaultBackendPort) {
+    return `${protocol}//${hostname}:${port}`;
+  }
+
+  // If frontend is on a typical SPA dev port (3000/5173/etc) or any other port,
+  // reuse the same host but point to the backend port instead.
+  if (hasExplicitPort) {
+    return `${protocol}//${hostname}:${defaultBackendPort}`;
+  }
+
+  // For domains without a port (likely behind a proxy), keep the same origin.
+  if (!isLoopbackHost) {
+    return `${protocol}//${hostname}`;
+  }
+
+  // Loopback without explicit port – fall back to default backend port.
+  return `${protocol}//${hostname}:${defaultBackendPort}`;
+};
+
+if (!rawApiUrl) {
+  rawApiUrl = inferApiUrlFromWindow() || 'http://localhost:5000';
+}
 
 // Handle cases where the URL might have commas, trailing commas, or extra whitespace
 if (typeof rawApiUrl === 'string') {
