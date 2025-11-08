@@ -33,6 +33,16 @@ export default function CustodiansPage() {
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [existingUser, setExistingUser] = useState<{ name: string; email: string; role: string } | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCustodian, setEditingCustodian] = useState<Custodian | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    phone: '',
+    location: '',
+    status: 'active'
+  });
+  const [isUpdatingCustodian, setIsUpdatingCustodian] = useState(false);
+  const [deletingCustodianId, setDeletingCustodianId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -85,6 +95,88 @@ export default function CustodiansPage() {
   const handleView = (custodian: Custodian) => {
     setSelectedCustodian(custodian);
     setIsViewDialogOpen(true);
+  };
+
+  const handleEditCustodian = (custodian: Custodian) => {
+    setEditingCustodian(custodian);
+    setEditFormData({
+      name: custodian.name || '',
+      phone: custodian.phone && custodian.phone !== 'N/A' ? custodian.phone : '',
+      location: custodian.location && custodian.location !== 'N/A' ? custodian.location : '',
+      status: custodian.status || 'active'
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateCustodian = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustodian) return;
+
+    setIsUpdatingCustodian(true);
+    setError('');
+
+    try {
+      const payload = {
+        name: editFormData.name.trim(),
+        phone: editFormData.phone.trim() || null,
+        location: editFormData.location.trim() || null,
+        status: editFormData.status
+      };
+
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.CUSTODIANS.UPDATE}/${editingCustodian.id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setIsEditDialogOpen(false);
+        setEditingCustodian(null);
+        fetchCustodians();
+      } else {
+        setError(data.message || 'Failed to update custodian');
+      }
+    } catch (err) {
+      console.error('Error updating custodian:', err);
+      setError('Failed to update custodian. Please try again.');
+    } finally {
+      setIsUpdatingCustodian(false);
+    }
+  };
+
+  const handleDeleteCustodian = async (custodian: Custodian) => {
+    if (!confirm(`Delete ${custodian.name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingCustodianId(custodian.id);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.CUSTODIANS.DELETE}/${custodian.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok && (data?.success ?? true)) {
+        if (editingCustodian?.id === custodian.id) {
+          setIsEditDialogOpen(false);
+          setEditingCustodian(null);
+        }
+        fetchCustodians();
+      } else {
+        setError(data?.message || 'Failed to delete custodian');
+      }
+    } catch (err) {
+      console.error('Error deleting custodian:', err);
+      setError('Failed to delete custodian. Please try again.');
+    } finally {
+      setDeletingCustodianId(null);
+    }
   };
 
   const handleViewCredentials = async (id: number) => {
@@ -306,14 +398,42 @@ export default function CustodiansPage() {
       } else {
         // Handle error response - show user-friendly message
         let errorMessage = data.message || 'Failed to add custodian';
-        
-        // If there's existing user info, make the message more informative
-        if (data.existingUser) {
-          errorMessage = `Email already in use: ${data.existingUser.email} is registered as ${data.existingUser.role} (${data.existingUser.name}).`;
+
+        const normalizeExistingUser = (user: any) => {
+          if (!user) return null;
+          if (!user.email) return null;
+          return {
+            name: user.name || 'Existing User',
+            email: user.email,
+            role: user.role || 'user'
+          };
+        };
+
+        let conflictUser = normalizeExistingUser(data.existingUser);
+
+        // Some APIs only send back a message without structured data. In that case,
+        // fall back to using the form input so the admin can trigger the delete flow.
+        const lowerMessage = (data.message || '').toLowerCase();
+        if (
+          !conflictUser &&
+          formData.email &&
+          (lowerMessage.includes('already exists') || lowerMessage.includes('already in use'))
+        ) {
+          conflictUser = {
+            name: normalizeExistingUser(data.existingUser)?.name || formData.name || 'Existing User',
+            email: formData.email,
+            role: normalizeExistingUser(data.existingUser)?.role || 'user'
+          };
         }
-        
+
+        if (conflictUser) {
+          const roleLabel = conflictUser.role.replace(/_/g, ' ');
+          const nameLabel = conflictUser.name ? ` (${conflictUser.name})` : '';
+          errorMessage = `Email already in use: ${conflictUser.email} is registered as ${roleLabel}${nameLabel}.`;
+        }
+
         setError(errorMessage);
-        setExistingUser(data.existingUser || null); // Store existing user info for deletion
+        setExistingUser(conflictUser); // Store existing user info for deletion or null
         console.error('Failed to add custodian:', data);
         console.error('Existing user details:', data.existingUser);
       }
@@ -435,10 +555,18 @@ export default function CustodiansPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleView(custodian)}
-                          className="flex-1"
+                          className="flex-1 min-w-[110px]"
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditCustodian(custodian)}
+                          className="flex-1 min-w-[110px]"
+                        >
+                          Edit
                         </Button>
                         <Button
                           variant="outline"
@@ -452,9 +580,18 @@ export default function CustodiansPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleResendCredentials(custodian.id)}
-                          className="flex-1"
+                          className="flex-1 min-w-[110px]"
                         >
                           Resend
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteCustodian(custodian)}
+                          disabled={deletingCustodianId === custodian.id}
+                          className="flex-1 min-w-[110px]"
+                        >
+                          {deletingCustodianId === custodian.id ? 'Deleting...' : 'Delete'}
                         </Button>
                       </div>
                     </CardContent>
@@ -504,6 +641,89 @@ export default function CustodiansPage() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Custodian Dialog */}
+        <Dialog
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) {
+              setEditingCustodian(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Custodian</DialogTitle>
+              <DialogDescription>Update custodian information for your hostel.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleUpdateCustodian} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Full Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  placeholder="Full name"
+                  required
+                />
+              </div>
+              <div>
+                <Label>Email Address</Label>
+                <Input value={editingCustodian?.email || ''} disabled />
+                <p className="text-xs text-muted-foreground mt-1">Email addresses are managed centrally. To change the email, delete and recreate the custodian.</p>
+              </div>
+              <div>
+                <Label htmlFor="edit-phone">Phone Number {editFormData.status === 'active' ? '*' : ''}</Label>
+                <Input
+                  id="edit-phone"
+                  type="tel"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  placeholder="Phone number"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-location">Location</Label>
+                <Input
+                  id="edit-location"
+                  value={editFormData.location}
+                  onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                  placeholder="e.g., Block A, Room 101"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <select
+                  id="edit-status"
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingCustodian(null);
+                  }}
+                  disabled={isUpdatingCustodian}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdatingCustodian}>
+                  {isUpdatingCustodian ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
 
