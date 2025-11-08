@@ -34,6 +34,24 @@ if (!rawApiUrl) {
   rawApiUrl = inferApiUrlFromWindow() || 'http://localhost:5000';
 }
 
+// Prevent accidental use of localhost in hosted environments (Chrome blocks loopback from public origins)
+if (typeof window !== 'undefined') {
+  const hostIsPublic =
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
+
+  if (hostIsPublic && typeof rawApiUrl === 'string' && rawApiUrl.includes('localhost')) {
+    const inferred = inferApiUrlFromWindow();
+    if (inferred && !inferred.includes('localhost')) {
+      console.warn(
+        '⚠️  Overriding localhost API URL because app is served from a public host:',
+        inferred
+      );
+      rawApiUrl = inferred;
+    }
+  }
+}
+
 // Handle cases where the URL might have commas, trailing commas, or extra whitespace
 if (typeof rawApiUrl === 'string') {
   // If the URL contains a comma (multiple values), take only the first one
@@ -77,6 +95,9 @@ export const API_CONFIG = {
       LIST: `${API_BASE_URL}/api/payments`,
       CREATE: `${API_BASE_URL}/api/payments`,
       SUMMARY: `${API_BASE_URL}/api/payments/summary`,
+      HOSTEL_SUMMARY: `${API_BASE_URL}/api/payments/summary/hostel`,
+      SEMESTER_SUMMARY: `${API_BASE_URL}/api/payments/summary/semesters`,
+      GLOBAL_SUMMARY: `${API_BASE_URL}/api/payments/summary/global`,
     },
     ROOMS: {
       LIST: `${API_BASE_URL}/api/rooms`,

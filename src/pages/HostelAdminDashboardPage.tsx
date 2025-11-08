@@ -6,6 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Users, Bed, TrendingUp, AlertCircle, AlertTriangle, CreditCard } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SemesterSelector } from '@/components/SemesterSelector';
+import SemesterPaymentsSection, {
+  SemesterPaymentsData,
+  SemesterPaymentSummary,
+} from '@/components/payments/SemesterPaymentsSection';
 
 interface HostelStats {
   hostel_name: string;
@@ -28,15 +32,37 @@ export default function HostelAdminDashboardPage() {
   const [stats, setStats] = useState<HostelStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+  const [financialOverview, setFinancialOverview] = useState<{ total_collected: number; total_outstanding: number }>({
+    total_collected: 0,
+    total_outstanding: 0,
+  });
+  const [isFinancialLoading, setIsFinancialLoading] = useState(true);
+  const [paymentsData, setPaymentsData] = useState<SemesterPaymentsData>({
+    current: null,
+    history: [],
+  });
+  const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.hostel_id) {
       fetchHostelStats();
+      fetchFinancialOverview();
+      fetchSemesterPaymentHistory();
     } else {
       setError('No hostel assigned');
       setIsLoading(false);
+      setIsFinancialLoading(false);
+      setIsPaymentsLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user?.hostel_id) {
+      fetchFinancialOverview();
+    }
+  }, [user?.hostel_id, selectedSemesterId]);
 
   const fetchHostelStats = async () => {
     if (!user?.hostel_id) return;
@@ -77,6 +103,98 @@ export default function HostelAdminDashboardPage() {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const formatCurrency = (value: number) =>
+    `UGX ${Number(value || 0).toLocaleString('en-US', {
+      maximumFractionDigits: 0,
+    })}`;
+
+  const fetchFinancialOverview = async () => {
+    if (!user?.hostel_id) return;
+
+    try {
+      setIsFinancialLoading(true);
+      const semesterQuery = selectedSemesterId ? `?semester_id=${selectedSemesterId}` : '';
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.PAYMENTS.SUMMARY}${semesterQuery}`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment overview');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.data) {
+        throw new Error(data.message || 'Unable to load payment overview');
+      }
+
+      setFinancialOverview({
+        total_collected: Number(data.data.total_collected ?? 0),
+        total_outstanding: Number(data.data.total_outstanding ?? 0),
+      });
+    } catch (err) {
+      console.error('Error fetching financial overview:', err);
+      setFinancialOverview({
+        total_collected: 0,
+        total_outstanding: 0,
+      });
+    } finally {
+      setIsFinancialLoading(false);
+    }
+  };
+
+  const normalizeSummary = (summary: any): SemesterPaymentSummary => ({
+    semester_id: summary?.semester_id ?? null,
+    name: summary?.name ?? null,
+    academic_year: summary?.academic_year ?? null,
+    start_date: summary?.start_date ?? null,
+    end_date: summary?.end_date ?? null,
+    is_current: Boolean(summary?.is_current),
+    total_collected: Number(summary?.total_collected ?? 0),
+    total_expected: Number(summary?.total_expected ?? 0),
+    outstanding: Number(summary?.outstanding ?? 0),
+  });
+
+  const fetchSemesterPaymentHistory = async () => {
+    if (!user?.hostel_id) return;
+
+    try {
+      setIsPaymentsLoading(true);
+      setPaymentsError(null);
+
+      const response = await fetch(API_CONFIG.ENDPOINTS.PAYMENTS.SEMESTER_SUMMARY, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch semester payment history');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.data) {
+        throw new Error(data.message || 'Unable to load semester payment history');
+      }
+
+      const current = data.data.current ? normalizeSummary(data.data.current) : null;
+      const history = Array.isArray(data.data.history)
+        ? data.data.history.map(normalizeSummary)
+        : [];
+
+      setPaymentsData({
+        current,
+        history,
+      });
+    } catch (err) {
+      console.error('Error fetching semester payments:', err);
+      setPaymentsError(err instanceof Error ? err.message : 'Failed to load payment history');
+      setPaymentsData({
+        current: null,
+        history: [],
+      });
+    } finally {
+      setIsPaymentsLoading(false);
     }
   };
 
@@ -149,7 +267,12 @@ export default function HostelAdminDashboardPage() {
               <p className="text-sm md:text-base text-gray-600 mt-2">Overview of your hostel operations</p>
             )}
           </div>
-          {user?.hostel_id && <SemesterSelector hostelId={user.hostel_id} />}
+          {user?.hostel_id && (
+            <SemesterSelector
+              hostelId={user.hostel_id}
+              onSemesterChange={setSelectedSemesterId}
+            />
+          )}
         </div>
 
         {/* Welcome Message with Hostel Assignment */}
@@ -206,7 +329,33 @@ export default function HostelAdminDashboardPage() {
         )}
 
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-white md:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base font-semibold text-green-900">Total Collected</CardTitle>
+                <CreditCard className="h-5 w-5 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-700">
+                  {formatCurrency(financialOverview.total_collected)}
+                </div>
+                <p className="text-xs text-green-700/70 mt-1">Money received for this hostel</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-base font-semibold text-amber-900">Outstanding</CardTitle>
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-amber-700">
+                  {formatCurrency(financialOverview.total_outstanding)}
+                </div>
+                <p className="text-xs text-amber-700/70 mt-1">Pending collections</p>
+              </CardContent>
+            </Card>
+
             {/* Students Card */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -293,6 +442,50 @@ export default function HostelAdminDashboardPage() {
             </Card>
           </div>
         )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Collected</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                {isFinancialLoading
+                  ? 'Loading...'
+                  : formatCurrency(financialOverview.total_collected)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedSemesterId
+                  ? 'Selected semester collections'
+                  : 'Current semester collections'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">
+                {isFinancialLoading
+                  ? 'Loading...'
+                  : formatCurrency(financialOverview.total_outstanding)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Amount pending from students for this selection
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <SemesterPaymentsSection
+          title="Semester Collections Detail"
+          description="Detailed breakdown of expected, collected, and outstanding amounts by semester."
+          data={paymentsData}
+          loading={isPaymentsLoading}
+          error={paymentsError}
+        />
 
         {!stats && !isLoading && !error && (
           <Card>

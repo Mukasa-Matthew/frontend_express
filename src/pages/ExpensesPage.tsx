@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type JSX } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,11 +23,12 @@ interface Expense {
   created_at: string;
 }
 
-export default function ExpensesPage() {
+export default function ExpensesPage(): JSX.Element {
   const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -48,14 +49,43 @@ export default function ExpensesPage() {
     try {
       setIsLoading(true);
       setError('');
+      setWarning(null);
 
-      const semesterParam = selectedSemesterId ? `&semester_id=${selectedSemesterId}` : '';
-      const response = await fetch(`${API_CONFIG.ENDPOINTS.EXPENSES.LIST}?page=1&limit=100${semesterParam}`, {
-        headers: getAuthHeaders()
-      });
+      const buildUrl = (includeSemester: boolean) => {
+        const semesterParam =
+          includeSemester && selectedSemesterId ? `&semester_id=${selectedSemesterId}` : '';
+        return `${API_CONFIG.ENDPOINTS.EXPENSES.LIST}?page=1&limit=100${semesterParam}`;
+      };
+
+      const runFetch = async (includeSemester: boolean) => {
+        const response = await fetch(buildUrl(includeSemester), {
+          headers: getAuthHeaders(),
+        });
+        return response;
+      };
+
+      let response = await runFetch(Boolean(selectedSemesterId));
+      if (!response.ok && response.status === 400 && selectedSemesterId) {
+        let body: any = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+        const message = body?.message || '';
+        if (message.includes('Semester filtering is not supported')) {
+          setWarning(
+            'Semester-specific expense filtering is not available yet. Showing all recorded expenses.'
+          );
+          response = await runFetch(false);
+        } else {
+          throw new Error(message || 'Failed to fetch expenses');
+        }
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to fetch expenses');
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.message || 'Failed to fetch expenses');
       }
 
       const data = await response.json();
@@ -71,7 +101,6 @@ export default function ExpensesPage() {
       setIsLoading(false);
     }
   };
-
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -183,7 +212,13 @@ export default function ExpensesPage() {
           </Card>
         )}
 
-        {/* Error State */}
+        {/* Warning / Error State */}
+        {warning && !isLoading && (
+          <Alert className="border-amber-200 bg-amber-50">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-900">{warning}</AlertDescription>
+          </Alert>
+        )}
         {error && !isLoading && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />

@@ -6,6 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Users, Receipt, DollarSign, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SemesterSelector } from '@/components/SemesterSelector';
+import SemesterPaymentsSection, {
+  SemesterPaymentsData,
+  SemesterPaymentSummary,
+} from '@/components/payments/SemesterPaymentsSection';
 
 interface CustodianStats {
   total_students: number;
@@ -26,6 +30,12 @@ export default function CustodianDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+  const [paymentsData, setPaymentsData] = useState<SemesterPaymentsData>({
+    current: null,
+    history: [],
+  });
+  const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
+  const [paymentsError, setPaymentsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -36,6 +46,12 @@ export default function CustodianDashboardPage() {
   useEffect(() => {
     fetchStats();
   }, [user, selectedSemesterId]);
+
+  useEffect(() => {
+    if (user) {
+      fetchSemesterPaymentHistory();
+    }
+  }, [user]);
 
   const fetchHostelInfo = async () => {
     if (!user?.id || user.role !== 'custodian') {
@@ -159,6 +175,57 @@ export default function CustodianDashboardPage() {
     }
   };
 
+  const normalizeSummary = (summary: any): SemesterPaymentSummary => ({
+    semester_id: summary?.semester_id ?? null,
+    name: summary?.name ?? null,
+    academic_year: summary?.academic_year ?? null,
+    start_date: summary?.start_date ?? null,
+    end_date: summary?.end_date ?? null,
+    is_current: Boolean(summary?.is_current),
+    total_collected: Number(summary?.total_collected ?? 0),
+    total_expected: Number(summary?.total_expected ?? 0),
+    outstanding: Number(summary?.outstanding ?? 0),
+  });
+
+  const fetchSemesterPaymentHistory = async () => {
+    try {
+      setIsPaymentsLoading(true);
+      setPaymentsError(null);
+
+      const response = await fetch(API_CONFIG.ENDPOINTS.PAYMENTS.SEMESTER_SUMMARY, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load semester payment history');
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.data) {
+        throw new Error(data.message || 'Unable to load semester payment history');
+      }
+
+      const current = data.data.current ? normalizeSummary(data.data.current) : null;
+      const history = Array.isArray(data.data.history)
+        ? data.data.history.map(normalizeSummary)
+        : [];
+
+      setPaymentsData({
+        current,
+        history,
+      });
+    } catch (err) {
+      console.error('Error fetching semester payment history:', err);
+      setPaymentsError(err instanceof Error ? err.message : 'Failed to load payment history');
+      setPaymentsData({
+        current: null,
+        history: [],
+      });
+    } finally {
+      setIsPaymentsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -234,7 +301,49 @@ export default function CustodianDashboardPage() {
           </AlertDescription>
         </Alert>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+          {/* Payments Card */}
+          <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-white sm:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-semibold text-green-900">Total Collected</CardTitle>
+              <DollarSign className="h-5 w-5 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-700">
+                UGX {stats.total_payments.toLocaleString()}
+              </div>
+              <p className="text-xs text-green-700/70 mt-1">Money received this semester</p>
+            </CardContent>
+          </Card>
+
+          {/* Outstanding Balance Card */}
+          <Card className="border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-semibold text-amber-900">Outstanding Balance</CardTitle>
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-700">
+                UGX {stats.outstanding_balance.toLocaleString()}
+              </div>
+              <p className="text-xs text-amber-700/70 mt-1">Amount still pending</p>
+            </CardContent>
+          </Card>
+
+          {/* Expenses Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+              <Receipt className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                UGX {stats.total_expenses.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Spend to date</p>
+            </CardContent>
+          </Card>
+
           {/* Students Card */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -243,52 +352,18 @@ export default function CustodianDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total_students}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total students</p>
-            </CardContent>
-          </Card>
-
-          {/* Expenses Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <Receipt className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                UGX {stats.total_expenses.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">All expenses</p>
-            </CardContent>
-          </Card>
-
-          {/* Payments Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                UGX {stats.total_payments.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Received payments</p>
-            </CardContent>
-          </Card>
-
-          {/* Outstanding Balance Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">
-                UGX {stats.outstanding_balance.toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Pending payments</p>
+              <p className="text-xs text-muted-foreground mt-1">Currently assigned</p>
             </CardContent>
           </Card>
         </div>
+
+        <SemesterPaymentsSection
+          title="Collections by Semester"
+          description="Monitor how much has been collected versus expected for each semester."
+          data={paymentsData}
+          loading={isPaymentsLoading}
+          error={paymentsError}
+        />
       </div>
     </Layout>
   );

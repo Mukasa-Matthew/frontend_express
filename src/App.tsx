@@ -30,6 +30,7 @@ import ExpensesPage from '@/pages/ExpensesPage';
 import TransactionsPage from '@/pages/TransactionsPage';
 import MessagingPage from '@/pages/MessagingPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
+import SuperAdminCollectionsPage from '@/pages/SuperAdminCollectionsPage';
 
 // Placeholder component for pages that aren't migrated yet
 const PlaceholderPage = ({ pageName }: { pageName: string }) => (
@@ -60,6 +61,7 @@ function App() {
           <Route path="/hostels/:id" element={<HostelDetailsPage />} />
           <Route path="/universities" element={<UniversitiesPage />} />
           <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
+          <Route path="/collections" element={<SuperAdminCollectionsPage />} />
           <Route path="/semesters" element={<SemesterManagementPage />} />
           <Route path="/semesters/:hostelId?" element={<SemesterManagementPage />} />
           <Route path="/semesters/details/:id" element={<SemesterDetailsPage />} />

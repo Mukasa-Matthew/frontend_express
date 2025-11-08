@@ -16,7 +16,8 @@ import {
   User,
   CreditCard,
   Calendar,
-  Mail
+  Mail,
+  DollarSign
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -57,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Create Hostel', href: '/hostels/create', icon: Plus },
         { name: 'Manage Hostels', href: '/hostels', icon: Building2 },
+        { name: 'Collections', href: '/collections', icon: DollarSign },
         { name: 'Subscription Plans', href: '/subscription-plans', icon: CreditCard },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
         { name: 'Universities', href: '/universities', icon: GraduationCap },
