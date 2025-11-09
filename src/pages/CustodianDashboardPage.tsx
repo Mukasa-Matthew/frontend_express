@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
+import { DashboardClock } from '@/components/DashboardClock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -264,36 +265,44 @@ export default function CustodianDashboardPage() {
   return (
     <Layout>
       <div className="space-y-6 sm:space-y-7">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Custodian Dashboard</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Custodian Dashboard</h1>
             {hostelName ? (
-              <div className="flex flex-wrap items-center gap-1.5 text-sm md:text-base text-gray-600">
+              <div className="flex flex-wrap items-center gap-1.5 text-sm md:text-base text-muted-foreground">
                 <span>Custodian ·</span>
-                <span className="font-semibold text-indigo-600">{hostelName}</span>
+                <span className="font-semibold text-primary">{hostelName}</span>
               </div>
             ) : (
-              <p className="text-sm md:text-base text-gray-600">Overview of your hostel operations</p>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Overview of your hostel operations
+              </p>
             )}
           </div>
-          <SemesterSelector 
-            hostelId={user?.hostel_id || null}
-            onSemesterChange={setSelectedSemesterId}
-          />
+          <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
+            <SemesterSelector
+              hostelId={user?.hostel_id || null}
+              onSemesterChange={setSelectedSemesterId}
+            />
+            <DashboardClock className="md:ml-auto" />
+          </div>
         </div>
 
         {/* Welcome Message with Hostel Assignment */}
-        <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-          <AlertCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-900">
+        <Alert className="bg-emerald-500/10 border-emerald-500/20 text-emerald-500">
+          <AlertCircle className="h-4 w-4 text-emerald-500" />
+          <AlertDescription className="text-emerald-600 dark:text-emerald-300">
             <div className="flex flex-col gap-2">
               <div>
-                <strong>{greeting.emoji} {greeting.text}, {displayName}!</strong> Welcome back to your dashboard.
+                <strong>
+                  {greeting.emoji} {greeting.text}, {displayName}!
+                </strong>{' '}
+                Welcome back to your dashboard.
               </div>
               {hostelName && (
-                <div className="mt-2 pt-2 border-t border-green-200">
-                  <p className="text-sm font-semibold text-green-800">
-                    🏠 Assigned Hostel: <span className="text-green-700">{hostelName}</span>
+                <div className="mt-2 pt-2 border-t border-emerald-500/20">
+                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">
+                    🏠 Assigned Hostel: <span className="text-emerald-500/80">{hostelName}</span>
                   </p>
                 </div>
               )}
@@ -303,30 +312,38 @@ export default function CustodianDashboardPage() {
 
         <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 sm:mx-0 sm:grid sm:grid-cols-2 xl:grid-cols-4 sm:gap-5 md:gap-6">
           {/* Payments Card */}
-          <Card className="min-w-[240px] border-2 border-green-100 bg-gradient-to-br from-green-50 to-white snap-start sm:min-w-0 sm:col-span-2">
+          <Card className="min-w-[240px] border border-emerald-500/20 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0 sm:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-semibold text-green-900">Total Collected</CardTitle>
-              <DollarSign className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-base font-semibold text-emerald-600 dark:text-emerald-300">
+                Total Collected
+              </CardTitle>
+              <DollarSign className="h-5 w-5 text-emerald-500 dark:text-emerald-300" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-700">
+              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-300">
                 UGX {stats.total_payments.toLocaleString()}
               </div>
-              <p className="text-xs text-green-700/70 mt-1">Money received this semester</p>
+              <p className="text-xs text-emerald-600/70 dark:text-emerald-200/70 mt-1">
+                Money received this semester
+              </p>
             </CardContent>
           </Card>
 
           {/* Outstanding Balance Card */}
-          <Card className="min-w-[220px] border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white snap-start sm:min-w-0">
+          <Card className="min-w-[220px] border border-amber-500/25 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-semibold text-amber-900">Outstanding Balance</CardTitle>
-              <AlertCircle className="h-5 w-5 text-amber-600" />
+              <CardTitle className="text-base font-semibold text-amber-600 dark:text-amber-300">
+                Outstanding Balance
+              </CardTitle>
+              <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-300" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-700">
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-300">
                 UGX {stats.outstanding_balance.toLocaleString()}
               </div>
-              <p className="text-xs text-amber-700/70 mt-1">Amount still pending</p>
+              <p className="text-xs text-amber-600/70 dark:text-amber-200/70 mt-1">
+                Amount still pending
+              </p>
             </CardContent>
           </Card>
 

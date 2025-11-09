@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { API_CONFIG } from '@/config/api';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -149,10 +150,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-2.5 bg-white rounded-xl shadow-lg border border-slate-200 md:hidden hover:bg-slate-50 active:scale-95 transition-all duration-200"
+        className="fixed top-4 left-4 z-50 p-2.5 rounded-xl shadow-lg border border-border bg-card text-foreground md:hidden hover:bg-accent hover:text-accent-foreground active:scale-95 transition-all duration-200"
         aria-label="Toggle menu"
       >
-        {isOpen ? <X className="h-5 w-5 text-slate-700" /> : <Menu className="h-5 w-5 text-slate-700" />}
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
 
       {/* Mobile Overlay */}
@@ -164,23 +165,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed left-0 top-0 w-64 sm:w-72 h-screen bg-white border-r border-slate-200 flex flex-col shadow-xl z-50 transition-transform duration-300 ease-in-out",
-        isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
-        className
-      )}>
+      <aside
+        className={cn(
+          'fixed left-0 top-0 w-64 sm:w-72 h-screen bg-card border-r border-border flex flex-col shadow-xl z-50 transition-transform duration-300 ease-in-out backdrop-blur supports-backdrop:backdrop-blur-sm',
+          isMobile ? (isOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0',
+          className
+        )}
+      >
         {/* Logo/Header */}
-        <div className="p-4 sm:p-6 border-b border-slate-200 flex-shrink-0">
+        <div className="p-4 sm:p-6 border-b border-border flex-shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl gradient-bg flex items-center justify-center flex-shrink-0">
-              <span className="text-lg sm:text-xl font-bold text-white">R</span>
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-primary/80 via-primary to-primary/80 flex items-center justify-center flex-shrink-0 text-primary-foreground shadow-md">
+              <span className="text-lg sm:text-xl font-bold">R</span>
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg sm:text-xl font-bold brand-text truncate">RooMio</h2>
+              <h2 className="text-lg sm:text-xl font-bold truncate text-foreground">RooMio</h2>
               {getRoleLabel() && (
-                <p className="text-xs sm:text-sm text-slate-600 truncate">{getRoleLabel()}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{getRoleLabel()}</p>
               )}
             </div>
+            <ThemeToggle className="hidden md:inline-flex" />
           </div>
         </div>
 
@@ -194,8 +198,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               key={item.name}
               variant="ghost"
               className={cn(
-                "w-full justify-start text-left h-10 sm:h-11 hover:bg-slate-100 hover:text-slate-900 text-slate-700 transition-all duration-200 rounded-lg",
-                isActive && "bg-indigo-50 text-indigo-700 font-semibold border-l-2 border-indigo-600"
+                'w-full justify-start text-left h-10 sm:h-11 hover:bg-accent/70 hover:text-accent-foreground text-muted-foreground transition-all duration-200 rounded-lg',
+                isActive && 'bg-primary/10 text-primary font-semibold border-l-2 border-primary'
               )}
               asChild
             >
@@ -209,9 +213,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       </nav>
 
       {/* User Info & Logout */}
-      <div className="p-3 sm:p-4 border-t border-slate-200 flex-shrink-0 bg-slate-50/50">
+      <div className="p-3 sm:p-4 border-t border-border flex-shrink-0 bg-muted/30">
         <div className="flex items-center space-x-2 sm:space-x-3 mb-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ring-2 ring-slate-200">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ring-2 ring-border/60">
             {user?.profile_picture ? (
               <img
                 src={`${API_CONFIG.BASE_URL}${user.profile_picture}?t=${new Date().getTime()}`}
@@ -222,26 +226,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 }}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center">
-                <span className="text-xs sm:text-sm font-bold text-indigo-700">
+              <div className="w-full h-full bg-gradient-to-br from-primary/10 to-primary/25 flex items-center justify-center">
+                <span className="text-xs sm:text-sm font-bold text-primary">
                   {userInitials}
                 </span>
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
+            <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
               {user?.name || 'User'}
             </p>
-            <p className="text-xs text-slate-500 truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {user?.email || 'admin@example.com'}
             </p>
           </div>
         </div>
+        <div className="flex items-center justify-between gap-2 mb-2 md:hidden">
+          <span className="text-xs font-medium text-muted-foreground">Appearance</span>
+          <ThemeToggle />
+        </div>
         <Button
           variant="outline"
           size="sm"
-          className="w-full border-slate-200 hover:bg-slate-50 text-slate-700 text-xs sm:text-sm h-9 sm:h-10"
+          className="w-full border-border hover:bg-accent/60 text-foreground text-xs sm:text-sm h-9 sm:h-10"
           onClick={handleLogout}
         >
           <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
+import { DashboardClock } from '@/components/DashboardClock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -252,43 +253,51 @@ export default function HostelAdminDashboardPage() {
   return (
     <Layout>
       <div className="space-y-6 sm:space-y-7">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Hostel Dashboard</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Hostel Dashboard</h1>
             {stats?.hostel_name ? (
-              <div className="flex flex-wrap items-center gap-1.5 text-sm md:text-base text-gray-600">
+              <div className="flex flex-wrap items-center gap-1.5 text-sm md:text-base text-muted-foreground">
                 <span>Admin ·</span>
-                <span className="font-semibold text-indigo-600">{stats.hostel_name}</span>
+                <span className="font-semibold text-primary">{stats.hostel_name}</span>
                 {stats.university_name && (
-                  <span className="text-gray-500">({stats.university_name})</span>
+                  <span className="text-muted-foreground">({stats.university_name})</span>
                 )}
               </div>
             ) : (
-              <p className="text-sm md:text-base text-gray-600">Overview of your hostel operations</p>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Overview of your hostel operations
+              </p>
             )}
           </div>
-          {user?.hostel_id && (
-            <SemesterSelector
-              hostelId={user.hostel_id}
-              onSemesterChange={setSelectedSemesterId}
-            />
-          )}
+          <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
+            {user?.hostel_id && (
+              <SemesterSelector
+                hostelId={user.hostel_id}
+                onSemesterChange={setSelectedSemesterId}
+              />
+            )}
+            <DashboardClock className="md:ml-auto" />
+          </div>
         </div>
 
         {/* Welcome Message with Hostel Assignment */}
-        <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-900">
+        <Alert className="bg-primary/10 border-primary/15 text-primary">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-primary">
             <div className="flex flex-col gap-2">
               <div>
-                <strong>{greeting.emoji} {greeting.text}, {displayName}!</strong> Welcome back to your dashboard.
+                <strong>
+                  {greeting.emoji} {greeting.text}, {displayName}!
+                </strong>{' '}
+                Welcome back to your dashboard.
               </div>
               {stats?.hostel_name && (
-                <div className="mt-2 pt-2 border-t border-blue-200">
-                  <p className="text-sm font-semibold text-blue-800">
-                    🏠 Assigned Hostel: <span className="text-blue-700">{stats.hostel_name}</span>
+                <div className="mt-2 pt-2 border-t border-primary/20">
+                  <p className="text-sm font-semibold text-primary">
+                    🏠 Assigned Hostel: <span className="text-primary/80">{stats.hostel_name}</span>
                     {stats.university_name && (
-                      <span className="text-blue-600"> - {stats.university_name}</span>
+                      <span className="text-primary/70"> - {stats.university_name}</span>
                     )}
                   </p>
                 </div>

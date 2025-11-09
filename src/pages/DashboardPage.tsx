@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
+import { DashboardClock } from '@/components/DashboardClock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -275,22 +276,27 @@ const fetchGlobalPayments = async () => {
   return (
     <Layout>
       <div className="space-y-5 sm:space-y-6">
-        <div className="space-y-2 sm:space-y-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600">Platform overview and statistics</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1.5">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Platform overview and statistics
+            </p>
+          </div>
+          <DashboardClock className="self-start sm:self-end" />
         </div>
 
         {/* Welcome Message */}
-        <Alert className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
-          <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
-          <AlertDescription className="text-blue-900">
+        <Alert className="bg-primary/10 border-primary/20 text-primary shadow-sm backdrop-blur">
+          <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+          <AlertDescription className="text-inherit">
             <div className="flex items-start sm:items-center gap-2 sm:gap-3">
               <span className="text-xl sm:text-2xl flex-shrink-0">{greeting.emoji}</span>
               <div className="min-w-0 flex-1">
                 <strong className="text-base sm:text-lg block">
                   {greeting.text}, {displayName}! {greeting.icon}
                 </strong>
-                <p className="text-xs sm:text-sm text-blue-700 mt-1">
+                <p className="text-xs sm:text-sm text-primary/80 mt-1">
                   👋 Welcome back to your dashboard! Here's what's happening today.
                 </p>
               </div>
@@ -302,48 +308,52 @@ const fetchGlobalPayments = async () => {
           <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 sm:mx-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-5">
             {user?.role === 'super_admin' && (
               <>
-                <Card className="min-w-[240px] border-2 border-green-100 bg-gradient-to-br from-green-50 to-white snap-start sm:min-w-0 xl:col-span-2">
+                <Card className="min-w-[240px] border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent snap-start sm:min-w-0 xl:col-span-2">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base font-semibold text-green-900">
+                    <CardTitle className="text-base font-semibold text-emerald-600 dark:text-emerald-300">
                       Total Collections
                     </CardTitle>
-                    <DollarSign className="h-5 w-5 text-green-600" />
+                    <DollarSign className="h-5 w-5 text-emerald-500 dark:text-emerald-300" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-green-700">
+                    <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-300">
                       {formatCurrency(globalPayments?.overall.collected || 0)}
                     </div>
-                    <p className="text-xs text-green-700/70 mt-1">All hostels combined</p>
+                    <p className="text-xs text-emerald-600/70 dark:text-emerald-200/70 mt-1">
+                      All hostels combined
+                    </p>
                   </CardContent>
                 </Card>
 
-                <Card className="min-w-[240px] border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white snap-start sm:min-w-0">
+                <Card className="min-w-[240px] border border-sky-500/20 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent snap-start sm:min-w-0">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base font-semibold text-blue-900">
+                    <CardTitle className="text-base font-semibold text-sky-600 dark:text-sky-300">
                       Total Expected
                     </CardTitle>
-                    <PiggyBank className="h-5 w-5 text-blue-600" />
+                    <PiggyBank className="h-5 w-5 text-sky-500 dark:text-sky-300" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-blue-700">
+                    <div className="text-3xl font-bold text-sky-600 dark:text-sky-300">
                       {formatCurrency(globalPayments?.overall.expected || 0)}
                     </div>
-                    <p className="text-xs text-blue-700/70 mt-1">Projected revenue</p>
+                    <p className="text-xs text-sky-700/70 dark:text-sky-200/70 mt-1">Projected revenue</p>
                   </CardContent>
                 </Card>
 
-                <Card className="min-w-[240px] border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white snap-start sm:min-w-0">
+                <Card className="min-w-[240px] border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent snap-start sm:min-w-0">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base font-semibold text-amber-900">
+                    <CardTitle className="text-base font-semibold text-amber-600 dark:text-amber-300">
                       Outstanding
                     </CardTitle>
-                    <CreditCard className="h-5 w-5 text-amber-600" />
+                    <CreditCard className="h-5 w-5 text-amber-500 dark:text-amber-300" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold text-amber-700">
+                    <div className="text-3xl font-bold text-amber-600 dark:text-amber-300">
                       {formatCurrency(globalPayments?.overall.outstanding || 0)}
                     </div>
-                    <p className="text-xs text-amber-700/70 mt-1">Pending collections</p>
+                    <p className="text-xs text-amber-700/70 dark:text-amber-200/70 mt-1">
+                      Pending collections
+                    </p>
                   </CardContent>
                 </Card>
               </>
@@ -459,9 +469,9 @@ const fetchGlobalPayments = async () => {
               </Alert>
             ) : null}
 
-            <Card className="border border-green-100 shadow-sm">
+            <Card className="border border-emerald-500/20 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900">
+                <CardTitle className="text-lg font-semibold text-foreground">
                   Collections Progress
                 </CardTitle>
               </CardHeader>
@@ -472,30 +482,30 @@ const fetchGlobalPayments = async () => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                       <div>
-                        <p className="text-xs uppercase text-slate-500">Collected</p>
-                        <p className="text-base font-semibold text-emerald-700">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Collected</p>
+                        <p className="text-base font-semibold text-emerald-600 dark:text-emerald-300">
                           {formatCurrency(totalCollected)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase text-slate-500">Expected</p>
-                        <p className="text-base font-semibold text-blue-700">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Expected</p>
+                        <p className="text-base font-semibold text-sky-600 dark:text-sky-300">
                           {formatCurrency(totalExpected)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs uppercase text-slate-500">Outstanding</p>
-                        <p className="text-base font-semibold text-amber-700">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Outstanding</p>
+                        <p className="text-base font-semibold text-amber-600 dark:text-amber-300">
                           {formatCurrency(totalOutstanding)}
                         </p>
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Collection rate</span>
                         <span>{progressPercent.toFixed(1)}%</span>
                       </div>
-                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-300 transition-all"
                           style={{ width: `${progressPercent}%` }}
@@ -512,7 +522,7 @@ const fetchGlobalPayments = async () => {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
               <Card className="shadow-sm">
                 <CardHeader className="flex flex-col gap-1">
-                  <CardTitle className="text-lg font-semibold text-gray-900">
+                  <CardTitle className="text-lg font-semibold text-foreground">
                     Top Hostels by Collections
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -546,7 +556,7 @@ const fetchGlobalPayments = async () => {
 
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900">
+                  <CardTitle className="text-lg font-semibold text-foreground">
                     Leading Contributors
                   </CardTitle>
                 </CardHeader>
@@ -555,23 +565,23 @@ const fetchGlobalPayments = async () => {
                     topHostelList.map((hostel) => (
                       <div
                         key={hostel.rank}
-                        className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm"
+                        className="rounded-lg border border-border bg-card/80 p-3 shadow-sm backdrop-blur"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
                               #{hostel.rank}
                             </span>
                             <div>
-                              <p className="text-sm font-semibold text-gray-900">
+                              <p className="text-sm font-semibold text-foreground">
                                 {hostel.name}
                               </p>
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-muted-foreground">
                                 {hostel.share.toFixed(1)}% of total collections
                               </p>
                             </div>
                           </div>
-                          <span className="text-sm font-semibold text-emerald-600">
+                          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">
                             {formatCurrency(hostel.collected)}
                           </span>
                         </div>
@@ -591,7 +601,7 @@ const fetchGlobalPayments = async () => {
         {!stats && !isLoading && !error && (
           <Card>
             <CardContent className="py-8 text-center">
-              <p className="text-gray-500">No data available</p>
+              <p className="text-muted-foreground">No data available</p>
             </CardContent>
           </Card>
         )}
