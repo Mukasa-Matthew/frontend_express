@@ -263,17 +263,17 @@ export default function CustodianDashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
+      <div className="space-y-6 sm:space-y-7">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+          <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Custodian Dashboard</h1>
             {hostelName ? (
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-sm md:text-base text-gray-600">Custodian -</p>
-                <p className="text-sm md:text-base font-semibold text-indigo-600">{hostelName}</p>
+              <div className="flex flex-wrap items-center gap-1.5 text-sm md:text-base text-gray-600">
+                <span>Custodian ·</span>
+                <span className="font-semibold text-indigo-600">{hostelName}</span>
               </div>
             ) : (
-              <p className="text-sm md:text-base text-gray-600 mt-2">Overview of your hostel operations</p>
+              <p className="text-sm md:text-base text-gray-600">Overview of your hostel operations</p>
             )}
           </div>
           <SemesterSelector 
@@ -301,9 +301,9 @@ export default function CustodianDashboardPage() {
           </AlertDescription>
         </Alert>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+        <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 sm:mx-0 sm:grid sm:grid-cols-2 xl:grid-cols-4 sm:gap-5 md:gap-6">
           {/* Payments Card */}
-          <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-white sm:col-span-2">
+          <Card className="min-w-[240px] border-2 border-green-100 bg-gradient-to-br from-green-50 to-white snap-start sm:min-w-0 sm:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base font-semibold text-green-900">Total Collected</CardTitle>
               <DollarSign className="h-5 w-5 text-green-600" />
@@ -317,7 +317,7 @@ export default function CustodianDashboardPage() {
           </Card>
 
           {/* Outstanding Balance Card */}
-          <Card className="border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white">
+          <Card className="min-w-[220px] border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base font-semibold text-amber-900">Outstanding Balance</CardTitle>
               <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -331,7 +331,7 @@ export default function CustodianDashboardPage() {
           </Card>
 
           {/* Expenses Card */}
-          <Card>
+          <Card className="min-w-[220px] snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
               <Receipt className="h-4 w-4 text-red-500" />
@@ -345,7 +345,7 @@ export default function CustodianDashboardPage() {
           </Card>
 
           {/* Students Card */}
-          <Card>
+          <Card className="min-w-[220px] snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Students</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />

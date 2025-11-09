@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const userInitials = useMemo(() => {
+    const name = user?.name?.trim();
+    if (name) {
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) {
+        return parts[0].charAt(0).toUpperCase();
+      }
+      const first = parts[0]?.charAt(0) ?? '';
+      const last = parts[parts.length - 1]?.charAt(0) ?? '';
+      const initials = `${first}${last}`.toUpperCase();
+      if (initials.trim().length) {
+        return initials;
+      }
+    }
+
+    const username = (user as any)?.username as string | undefined;
+    if (username?.trim()) {
+      return username.trim().slice(0, 2).toUpperCase();
+    }
+
+    if (user?.email?.trim()) {
+      return user.email.trim().charAt(0).toUpperCase();
+    }
+
+    return 'MM';
+  }, [user]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -197,7 +224,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center">
                 <span className="text-xs sm:text-sm font-bold text-indigo-700">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || 'MM'}
+                  {userInitials}
                 </span>
               </div>
             )}

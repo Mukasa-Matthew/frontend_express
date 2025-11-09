@@ -201,6 +201,33 @@ const fetchGlobalPayments = async () => {
     }
   };
 
+  const topHostelChartData = useMemo(() => {
+    const hostels = globalPayments?.hostels ?? [];
+    return hostels
+      .slice()
+      .sort((a, b) => b.totals.collected - a.totals.collected)
+      .slice(0, 6)
+      .map((hostel) => ({
+        hostel: hostel.hostel_name,
+        collected: hostel.totals.collected,
+      }));
+  }, [globalPayments]);
+
+  const topHostelList = useMemo(() => {
+    const hostels = globalPayments?.hostels ?? [];
+    const grandTotal = hostels.reduce((sum, h) => sum + h.totals.collected, 0);
+    return hostels
+      .slice()
+      .sort((a, b) => b.totals.collected - a.totals.collected)
+      .slice(0, 5)
+      .map((hostel, index) => ({
+        rank: index + 1,
+        name: hostel.hostel_name,
+        collected: hostel.totals.collected,
+        share: grandTotal > 0 ? (hostel.totals.collected / grandTotal) * 100 : 0,
+      }));
+  }, [globalPayments]);
+
   if (isLoading) {
     return (
       <Layout>
@@ -239,33 +266,6 @@ const fetchGlobalPayments = async () => {
   const formatCurrency = (value: number) =>
     `UGX ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
-  const topHostelChartData = useMemo(() => {
-    const hostels = globalPayments?.hostels ?? [];
-    return hostels
-      .slice()
-      .sort((a, b) => b.totals.collected - a.totals.collected)
-      .slice(0, 6)
-      .map((hostel) => ({
-        hostel: hostel.hostel_name,
-        collected: hostel.totals.collected,
-      }));
-  }, [globalPayments]);
-
-  const topHostelList = useMemo(() => {
-    const hostels = globalPayments?.hostels ?? [];
-    const grandTotal = hostels.reduce((sum, h) => sum + h.totals.collected, 0);
-    return hostels
-      .slice()
-      .sort((a, b) => b.totals.collected - a.totals.collected)
-      .slice(0, 5)
-      .map((hostel, index) => ({
-        rank: index + 1,
-        name: hostel.hostel_name,
-        collected: hostel.totals.collected,
-        share: grandTotal > 0 ? (hostel.totals.collected / grandTotal) * 100 : 0,
-      }));
-  }, [globalPayments]);
-
   const totalCollected = globalPayments?.overall.collected ?? 0;
   const totalExpected = globalPayments?.overall.expected ?? 0;
   const totalOutstanding = globalPayments?.overall.outstanding ?? 0;
@@ -274,10 +274,10 @@ const fetchGlobalPayments = async () => {
 
   return (
     <Layout>
-      <div className="space-y-4 sm:space-y-6">
-        <div>
+      <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-2 sm:space-y-3">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">Platform overview and statistics</p>
+          <p className="text-sm sm:text-base text-gray-600">Platform overview and statistics</p>
         </div>
 
         {/* Welcome Message */}
@@ -299,10 +299,10 @@ const fetchGlobalPayments = async () => {
         </Alert>
 
         {stats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 sm:mx-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:gap-5">
             {user?.role === 'super_admin' && (
               <>
-                <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-white xl:col-span-2">
+                <Card className="min-w-[240px] border-2 border-green-100 bg-gradient-to-br from-green-50 to-white snap-start sm:min-w-0 xl:col-span-2">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base font-semibold text-green-900">
                       Total Collections
@@ -317,7 +317,7 @@ const fetchGlobalPayments = async () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white">
+                <Card className="min-w-[240px] border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-white snap-start sm:min-w-0">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base font-semibold text-blue-900">
                       Total Expected
@@ -332,7 +332,7 @@ const fetchGlobalPayments = async () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white">
+                <Card className="min-w-[240px] border-2 border-amber-100 bg-gradient-to-br from-amber-50 to-white snap-start sm:min-w-0">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base font-semibold text-amber-900">
                       Outstanding
@@ -349,7 +349,7 @@ const fetchGlobalPayments = async () => {
               </>
             )}
             {/* Hostels Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Hostels</CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -361,7 +361,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Students Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Students</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -373,7 +373,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Universities Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Universities</CardTitle>
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
@@ -385,7 +385,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Total Rooms Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Rooms</CardTitle>
                 <Bed className="h-4 w-4 text-muted-foreground" />
@@ -397,7 +397,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Available Rooms Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Available Rooms</CardTitle>
                 <Bed className="h-4 w-4 text-green-600" />
@@ -409,7 +409,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Occupied Rooms Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Occupied Rooms</CardTitle>
                 <Bed className="h-4 w-4 text-blue-600" />
@@ -421,7 +421,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Occupancy Rate Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -437,7 +437,7 @@ const fetchGlobalPayments = async () => {
             </Card>
 
             {/* Admins Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start sm:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Hostel Admins</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />

@@ -251,20 +251,20 @@ export default function HostelAdminDashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
+      <div className="space-y-6 sm:space-y-7">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6">
+          <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Hostel Dashboard</h1>
             {stats?.hostel_name ? (
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-sm md:text-base text-gray-600">Admin -</p>
-                <p className="text-sm md:text-base font-semibold text-indigo-600">{stats.hostel_name}</p>
+              <div className="flex flex-wrap items-center gap-1.5 text-sm md:text-base text-gray-600">
+                <span>Admin ·</span>
+                <span className="font-semibold text-indigo-600">{stats.hostel_name}</span>
                 {stats.university_name && (
-                  <p className="text-sm md:text-base text-gray-500">({stats.university_name})</p>
+                  <span className="text-gray-500">({stats.university_name})</span>
                 )}
               </div>
             ) : (
-              <p className="text-sm md:text-base text-gray-600 mt-2">Overview of your hostel operations</p>
+              <p className="text-sm md:text-base text-gray-600">Overview of your hostel operations</p>
             )}
           </div>
           {user?.hostel_id && (
@@ -329,8 +329,8 @@ export default function HostelAdminDashboardPage() {
         )}
 
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-            <Card className="border-2 border-green-100 bg-gradient-to-br from-green-50 to-white md:col-span-2">
+          <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 md:mx-0 md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-6">
+            <Card className="min-w-[240px] border-2 border-green-100 bg-gradient-to-br from-green-50 to-white snap-start md:min-w-0 md:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base font-semibold text-green-900">Total Collected</CardTitle>
                 <CreditCard className="h-5 w-5 text-green-600" />
@@ -357,7 +357,7 @@ export default function HostelAdminDashboardPage() {
             </Card>
 
             {/* Students Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start md:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Students</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -369,7 +369,7 @@ export default function HostelAdminDashboardPage() {
             </Card>
 
             {/* Total Rooms Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start md:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Rooms</CardTitle>
                 <Bed className="h-4 w-4 text-muted-foreground" />
@@ -381,7 +381,7 @@ export default function HostelAdminDashboardPage() {
             </Card>
 
             {/* Available Rooms Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start md:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Available Rooms</CardTitle>
                 <Bed className="h-4 w-4 text-green-600" />
@@ -393,7 +393,7 @@ export default function HostelAdminDashboardPage() {
             </Card>
 
             {/* Occupied Rooms Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start md:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Occupied Rooms</CardTitle>
                 <Bed className="h-4 w-4 text-blue-600" />
@@ -405,7 +405,7 @@ export default function HostelAdminDashboardPage() {
             </Card>
 
             {/* Occupancy Rate Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start md:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Occupancy Rate</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -421,7 +421,7 @@ export default function HostelAdminDashboardPage() {
             </Card>
 
             {/* Subscription Status Card */}
-            <Card>
+            <Card className="min-w-[220px] snap-start md:min-w-0">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Subscription</CardTitle>
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
