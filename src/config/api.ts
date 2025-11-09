@@ -123,6 +123,7 @@ export const API_CONFIG = {
       GET: `${API_BASE_URL}/api/hostels`,
       ADMIN_SUMMARY: `${API_BASE_URL}/api/hostels`,
       DELETE: `${API_BASE_URL}/api/hostels`,
+      UPDATE: `${API_BASE_URL}/api/hostels`,
       RESEND_ADMIN_CREDENTIALS: `${API_BASE_URL}/api/hostels`,
       VIEW_CREDENTIALS: `${API_BASE_URL}/api/hostels`,
       IMAGES: {

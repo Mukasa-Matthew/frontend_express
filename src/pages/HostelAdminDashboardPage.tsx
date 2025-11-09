@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { DashboardClock } from '@/components/DashboardClock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, Bed, TrendingUp, AlertCircle, AlertTriangle, CreditCard } from 'lucide-react';
@@ -30,6 +32,7 @@ interface HostelStats {
 
 export default function HostelAdminDashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<HostelStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,17 +48,26 @@ export default function HostelAdminDashboardPage() {
   });
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [publicDetails, setPublicDetails] = useState<{
+    booking_fee: number | null;
+    price_per_room: number | null;
+    is_published: boolean;
+  } | null>(null);
+  const [isPublicDetailsLoading, setIsPublicDetailsLoading] = useState(true);
+  const [publicDetailsError, setPublicDetailsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.hostel_id) {
       fetchHostelStats();
       fetchFinancialOverview();
       fetchSemesterPaymentHistory();
+      fetchPublicDetails();
     } else {
       setError('No hostel assigned');
       setIsLoading(false);
       setIsFinancialLoading(false);
       setIsPaymentsLoading(false);
+      setIsPublicDetailsLoading(false);
     }
   }, [user]);
 
@@ -105,6 +117,46 @@ export default function HostelAdminDashboardPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchPublicDetails = async () => {
+    if (!user?.hostel_id) return;
+
+    try {
+      setIsPublicDetailsLoading(true);
+      setPublicDetailsError(null);
+
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.GET}/${user.hostel_id}`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch hostel public details');
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setPublicDetails({
+          booking_fee: data.data.booking_fee ?? null,
+          price_per_room: data.data.price_per_room ?? null,
+          is_published: Boolean(data.data.is_published),
+        });
+      } else {
+        throw new Error(data.message || 'Failed to load hostel public details');
+      }
+    } catch (err) {
+      console.error('Error fetching hostel public details:', err);
+      setPublicDetails(null);
+      setPublicDetailsError(err instanceof Error ? err.message : 'Failed to load public details');
+    } finally {
+      setIsPublicDetailsLoading(false);
+    }
+  };
+
+  const handleManagePublicDetails = () => {
+    if (!user?.hostel_id) return;
+    navigate(`/hostels/${user.hostel_id}#public-booking-fee`);
   };
 
   const formatCurrency = (value: number) =>
@@ -249,6 +301,8 @@ export default function HostelAdminDashboardPage() {
 
   const displayName = user?.username || user?.name || 'Admin';
   const greeting = getGreeting();
+  const bookingFeeMissing =
+    !isPublicDetailsLoading && (!publicDetails || publicDetails.booking_fee === null);
 
   return (
     <Layout>
@@ -336,6 +390,91 @@ export default function HostelAdminDashboardPage() {
             )}
           </Alert>
         )}
+
+        <Card
+          className={`${
+            bookingFeeMissing
+              ? 'border-red-200 bg-red-50 dark:border-red-400/40 dark:bg-red-950/40'
+              : 'border-primary/20 bg-primary/5 dark:border-primary/25 dark:bg-primary/10'
+          }`}
+        >
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-primary">
+                <CreditCard className="h-5 w-5" />
+                Public Booking Fee
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Students see this amount before paying the public booking fee.
+              </p>
+            </div>
+            <Button
+              variant={bookingFeeMissing ? 'destructive' : 'outline'}
+              onClick={handleManagePublicDetails}
+              disabled={!user?.hostel_id}
+            >
+              Manage Booking Fee
+            </Button>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Current booking fee
+              </p>
+              {isPublicDetailsLoading ? (
+                <p className="mt-2 text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <>
+                  <p className="mt-1 text-2xl font-semibold text-primary">
+                    {publicDetails?.booking_fee !== null && publicDetails?.booking_fee !== undefined
+                      ? formatCurrency(publicDetails.booking_fee)
+                      : 'Not set'}
+                  </p>
+                  {bookingFeeMissing && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Set this so students know how much to pay upfront when booking.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Price per semester
+              </p>
+              {isPublicDetailsLoading ? (
+                <p className="mt-2 text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <p className="mt-1 text-lg font-medium">
+                  {publicDetails?.price_per_room !== null && publicDetails?.price_per_room !== undefined
+                    ? formatCurrency(publicDetails.price_per_room)
+                    : 'Not set'}
+                </p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Public profile status
+              </p>
+              {isPublicDetailsLoading ? (
+                <p className="mt-2 text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <p
+                  className={`mt-1 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
+                    publicDetails?.is_published
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+                  }`}
+                >
+                  {publicDetails?.is_published ? 'Visible to students' : 'Hidden from students'}
+                </p>
+              )}
+              {publicDetailsError && !isPublicDetailsLoading && (
+                <p className="mt-2 text-xs text-destructive">{publicDetailsError}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {stats && (
           <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 md:mx-0 md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-6">

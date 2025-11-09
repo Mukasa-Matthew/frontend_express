@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { API_CONFIG, getAuthHeaders, getAuthHeadersForUpload } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { CredentialsDialog } from '@/components/CredentialsDialog';
-import { 
+import {
   Building2, Mail, Phone, MapPin, Users, Bed, Calendar, AlertCircle, ArrowLeft,
-  Upload, X, Star, Image as ImageIcon, Globe, Map, Save, Loader2, Key
+  Upload, X, Star, Image as ImageIcon, Globe, Map, Save, Loader2, Key, CreditCard
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -20,6 +21,11 @@ interface Hostel {
   name: string;
   address: string;
   description?: string;
+  amenities?: string | null;
+  price_per_room?: number | null;
+  booking_fee?: number | null;
+  distance_from_campus?: number | null;
+  occupancy_type?: 'male' | 'female' | 'mixed' | null;
   status: string;
   total_rooms: number;
   available_rooms: number;
@@ -66,17 +72,24 @@ export default function HostelDetailsPage() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingDetails, setSavingDetails] = useState(false);
   
   // Form states
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [isPublished, setIsPublished] = useState(false);
+  const [descriptionInput, setDescriptionInput] = useState('');
+  const [amenitiesInput, setAmenitiesInput] = useState('');
+const [priceInput, setPriceInput] = useState('');
+const [bookingFeeInput, setBookingFeeInput] = useState('');
+const [distanceInput, setDistanceInput] = useState('');
   
   // Credentials state
   const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const publicDetailsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -92,6 +105,23 @@ export default function HostelDetailsPage() {
       setLatitude(hostel.latitude?.toString() || '');
       setLongitude(hostel.longitude?.toString() || '');
       setIsPublished(hostel.is_published || false);
+      setDescriptionInput(hostel.description || '');
+      setAmenitiesInput(hostel.amenities || '');
+      setPriceInput(
+        hostel.price_per_room !== null && hostel.price_per_room !== undefined
+          ? hostel.price_per_room.toString()
+          : ''
+      );
+      setBookingFeeInput(
+        hostel.booking_fee !== null && hostel.booking_fee !== undefined
+          ? hostel.booking_fee.toString()
+          : ''
+      );
+      setDistanceInput(
+        hostel.distance_from_campus !== null && hostel.distance_from_campus !== undefined
+          ? hostel.distance_from_campus.toString()
+          : ''
+      );
     }
   }, [hostel]);
 
@@ -176,6 +206,19 @@ export default function HostelDetailsPage() {
     }
   };
 
+  const scrollToBookingFee = () => {
+    if (typeof window === 'undefined') return;
+
+    if (publicDetailsRef.current) {
+      publicDetailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    window.setTimeout(() => {
+      const bookingFeeField = document.getElementById('booking_fee') as HTMLInputElement | null;
+      bookingFeeField?.focus({ preventScroll: true });
+    }, 400);
+  };
+
   const handleDeleteImage = async (imageId: number) => {
     if (!id || !confirm('Are you sure you want to delete this image?')) return;
 
@@ -251,6 +294,74 @@ export default function HostelDetailsPage() {
       alert('Failed to update hostel');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSavePublicDetails = async () => {
+    if (!id) return;
+
+    try {
+      setSavingDetails(true);
+      const payload: Record<string, unknown> = {
+        description: descriptionInput.trim() || null,
+        amenities: amenitiesInput.trim() || null,
+      };
+
+      if (priceInput.trim() !== '') {
+        const parsedPrice = Number(priceInput.replace(/,/g, ''));
+        if (Number.isNaN(parsedPrice)) {
+          alert('Please enter a valid number for price per semester.');
+          setSavingDetails(false);
+          return;
+        }
+        payload.price_per_room = parsedPrice;
+      } else {
+        payload.price_per_room = null;
+      }
+
+      if (bookingFeeInput.trim() !== '') {
+        const parsedBookingFee = Number(bookingFeeInput.replace(/,/g, ''));
+        if (Number.isNaN(parsedBookingFee) || parsedBookingFee < 0) {
+          alert('Please enter a valid booking fee (UGX).');
+          setSavingDetails(false);
+          return;
+        }
+        payload.booking_fee = Math.round(parsedBookingFee);
+      } else {
+        payload.booking_fee = null;
+      }
+
+      if (distanceInput.trim() !== '') {
+        const parsedDistance = Number(distanceInput);
+        if (Number.isNaN(parsedDistance)) {
+          alert('Please enter a valid number for distance from campus.');
+          setSavingDetails(false);
+          return;
+        }
+        payload.distance_from_campus = parsedDistance;
+      } else {
+        payload.distance_from_campus = null;
+      }
+
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.UPDATE}/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        await fetchHostel();
+        alert('Public details updated successfully');
+      } else {
+        alert(data.message || 'Failed to update public details');
+      }
+    } catch (err) {
+      console.error('Error updating public details:', err);
+      alert('Failed to update public details');
+    } finally {
+      setSavingDetails(false);
     }
   };
 
@@ -389,7 +500,7 @@ export default function HostelDetailsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {/* Total Rooms */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -437,7 +548,135 @@ export default function HostelDetailsPage() {
               <p className="text-xs text-muted-foreground mt-1">Current occupancy</p>
             </CardContent>
           </Card>
+
+          {/* Public Booking Fee */}
+          <Card className="flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Public Booking Fee</CardTitle>
+              <CreditCard className="h-4 w-4 text-indigo-600" />
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <div
+                className={`text-2xl font-bold ${hostel.booking_fee == null ? 'text-amber-600' : ''}`}
+              >
+                {hostel.booking_fee != null
+                  ? `UGX ${Number(hostel.booking_fee).toLocaleString()}`
+                  : 'Not set'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Students see this before confirming a public booking.
+              </p>
+              <Button
+                onClick={scrollToBookingFee}
+                size="sm"
+                variant="outline"
+                className="mt-1 w-fit"
+              >
+                Update booking fee
+              </Button>
+            </CardContent>
+          </Card>
         </div>
+
+        {(isSuperAdmin || user?.role === 'hostel_admin') && (
+          <div ref={publicDetailsRef}>
+            <Card>
+            <CardHeader>
+              <CardTitle>Public Profile Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="public-description">Public Description</Label>
+                <Textarea
+                  id="public-description"
+                  rows={5}
+                  value={descriptionInput}
+                  onChange={(e) => setDescriptionInput(e.target.value)}
+                  placeholder="Describe this hostel for students browsing the public website."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This appears on the public website. Keep it welcoming, honest, and under 3-4 paragraphs.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="amenities">Amenities (comma separated)</Label>
+                <Textarea
+                  id="amenities"
+                  rows={3}
+                  value={amenitiesInput}
+                  onChange={(e) => setAmenitiesInput(e.target.value)}
+                  placeholder="e.g., High-speed WiFi, Study lounge, Laundry services"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="price_per_room">Price per semester (UGX)</Label>
+                  <Input
+                    id="price_per_room"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={priceInput}
+                    onChange={(e) => setPriceInput(e.target.value)}
+                    placeholder="e.g., 550000"
+                  />
+                </div>
+                <div id="public-booking-fee">
+                  <Label
+                    htmlFor="booking_fee"
+                    className="font-semibold text-indigo-600 flex items-center gap-2"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Public booking fee (UGX)
+                  </Label>
+                  <Input
+                    id="booking_fee"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={bookingFeeInput}
+                    onChange={(e) => setBookingFeeInput(e.target.value)}
+                    placeholder="e.g., 100000"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Students must pay this non-refundable fee when placing a public booking.
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="distance_from_campus">Distance from campus (km)</Label>
+                  <Input
+                    id="distance_from_campus"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={distanceInput}
+                    onChange={(e) => setDistanceInput(e.target.value)}
+                    placeholder="e.g., 0.5"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSavePublicDetails} disabled={savingDetails}>
+                  {savingDetails ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Public Details
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          </div>
+        )}
 
         {/* Super Admin Management Section */}
         {isSuperAdmin && (
@@ -660,6 +899,62 @@ export default function HostelDetailsPage() {
                 <div className="pt-2">
                   <p className="text-sm font-medium text-gray-900 mb-1">Description</p>
                   <p className="text-sm text-gray-600">{hostel.description}</p>
+                </div>
+              )}
+
+              {hostel.price_per_room !== null && hostel.price_per_room !== undefined && (
+                <div className="flex items-start gap-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Price per semester</p>
+                    <p className="text-sm text-gray-600">
+                      UGX {Number(hostel.price_per_room).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {hostel.booking_fee !== null && hostel.booking_fee !== undefined && (
+                <div className="flex items-start gap-3">
+                  <CreditCard className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Public booking fee</p>
+                    <p className="text-sm text-gray-600">
+                      UGX {Number(hostel.booking_fee).toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Students see this amount before paying for a reservation.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {hostel.distance_from_campus !== null && hostel.distance_from_campus !== undefined && (
+                <div className="flex items-start gap-3">
+                  <Map className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Distance from campus</p>
+                    <p className="text-sm text-gray-600">
+                      {hostel.distance_from_campus} km
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {hostel.amenities && (
+                <div className="pt-2">
+                  <p className="text-sm font-medium text-gray-900 mb-1">Amenities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {hostel.amenities
+                      .split(',')
+                      .map((amenity) => amenity.trim())
+                      .filter(Boolean)
+                      .map((amenity) => (
+                        <Badge key={amenity} variant="outline" className="bg-gray-50 text-gray-700">
+                          {amenity}
+                        </Badge>
+                      ))}
+                  </div>
                 </div>
               )}
 

@@ -118,74 +118,74 @@
 :root {
   color-scheme: light;
   --radius: 0.75rem;
-  --background: #f8fafc;
+  --background: #f5f7fb;
   --foreground: #0f172a;
-  --card: rgba(255, 255, 255, 0.9);
+  --card: rgba(255, 255, 255, 0.94);
   --card-foreground: #0f172a;
-  --popover: rgba(255, 255, 255, 0.94);
+  --popover: rgba(255, 255, 255, 0.96);
   --popover-foreground: #0f172a;
-  --primary: #4f46e5;
+  --primary: #2563eb;
   --primary-foreground: #f8fafc;
-  --secondary: rgba(99, 102, 241, 0.12);
-  --secondary-foreground: #312e81;
-  --muted: rgba(15, 23, 42, 0.05);
-  --muted-foreground: rgba(15, 23, 42, 0.65);
-  --accent: rgba(99, 102, 241, 0.15);
-  --accent-foreground: #312e81;
+  --secondary: rgba(14, 165, 233, 0.12);
+  --secondary-foreground: #0f172a;
+  --muted: rgba(15, 23, 42, 0.04);
+  --muted-foreground: rgba(71, 85, 105, 0.78);
+  --accent: rgba(14, 165, 233, 0.16);
+  --accent-foreground: #0f172a;
   --destructive: #ef4444;
   --destructive-foreground: #f8fafc;
-  --border: rgba(15, 23, 42, 0.12);
-  --input: rgba(15, 23, 42, 0.12);
-  --ring: rgba(99, 102, 241, 0.4);
-  --chart-1: #2dd4bf;
-  --chart-2: #60a5fa;
-  --chart-3: #c084fc;
-  --chart-4: #f472b6;
-  --chart-5: #fb923c;
+  --border: rgba(15, 23, 42, 0.1);
+  --input: rgba(15, 23, 42, 0.1);
+  --ring: rgba(37, 99, 235, 0.42);
+  --chart-1: #0ea5e9;
+  --chart-2: #38bdf8;
+  --chart-3: #a855f7;
+  --chart-4: #f97316;
+  --chart-5: #22c55e;
   --sidebar: rgba(255, 255, 255, 0.9);
   --sidebar-foreground: #1f2937;
-  --sidebar-primary: #4f46e5;
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #f8fafc;
-  --sidebar-accent: rgba(79, 70, 229, 0.12);
-  --sidebar-accent-foreground: #312e81;
+  --sidebar-accent: rgba(37, 99, 235, 0.12);
+  --sidebar-accent-foreground: #0f172a;
   --sidebar-border: rgba(15, 23, 42, 0.1);
-  --sidebar-ring: rgba(99, 102, 241, 0.45);
+  --sidebar-ring: rgba(37, 99, 235, 0.45);
 }
 
 html[data-theme='dark'] {
   color-scheme: dark;
   --background: #0b1120;
   --foreground: #e2e8f0;
-  --card: rgba(15, 23, 42, 0.72);
+  --card: rgba(15, 23, 42, 0.78);
   --card-foreground: #e2e8f0;
-  --popover: rgba(15, 23, 42, 0.86);
+  --popover: rgba(15, 23, 42, 0.88);
   --popover-foreground: #e2e8f0;
-  --primary: #818cf8;
+  --primary: #38bdf8;
   --primary-foreground: #0b1120;
-  --secondary: rgba(99, 102, 241, 0.2);
-  --secondary-foreground: #c7d2fe;
-  --muted: rgba(226, 232, 240, 0.08);
-  --muted-foreground: rgba(226, 232, 240, 0.7);
-  --accent: rgba(129, 140, 248, 0.2);
-  --accent-foreground: #c7d2fe;
+  --secondary: rgba(56, 189, 248, 0.18);
+  --secondary-foreground: #e0f2fe;
+  --muted: rgba(148, 163, 184, 0.12);
+  --muted-foreground: rgba(203, 213, 225, 0.75);
+  --accent: rgba(56, 189, 248, 0.22);
+  --accent-foreground: #e0f2fe;
   --destructive: #f87171;
   --destructive-foreground: #0b1120;
-  --border: rgba(148, 163, 184, 0.32);
-  --input: rgba(148, 163, 184, 0.32);
-  --ring: rgba(129, 140, 248, 0.5);
-  --chart-1: #14b8a6;
-  --chart-2: #3b82f6;
+  --border: rgba(148, 163, 184, 0.28);
+  --input: rgba(148, 163, 184, 0.28);
+  --ring: rgba(56, 189, 248, 0.45);
+  --chart-1: #0ea5e9;
+  --chart-2: #38bdf8;
   --chart-3: #a855f7;
-  --chart-4: #ec4899;
-  --chart-5: #f97316;
-  --sidebar: rgba(15, 23, 42, 0.85);
+  --chart-4: #f97316;
+  --chart-5: #22c55e;
+  --sidebar: rgba(15, 23, 42, 0.88);
   --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: #818cf8;
+  --sidebar-primary: #38bdf8;
   --sidebar-primary-foreground: #0b1120;
-  --sidebar-accent: rgba(99, 102, 241, 0.24);
-  --sidebar-accent-foreground: #c7d2fe;
-  --sidebar-border: rgba(148, 163, 184, 0.24);
-  --sidebar-ring: rgba(129, 140, 248, 0.55);
+  --sidebar-accent: rgba(56, 189, 248, 0.2);
+  --sidebar-accent-foreground: #e0f2fe;
+  --sidebar-border: rgba(148, 163, 184, 0.22);
+  --sidebar-ring: rgba(56, 189, 248, 0.5);
 }
 
 * {
@@ -207,7 +207,7 @@ html.theme-transition *::after {
 }
 
 .gradient-bg {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
 }
 
 .card-hover {
