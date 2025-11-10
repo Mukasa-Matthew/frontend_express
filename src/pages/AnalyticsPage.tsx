@@ -208,6 +208,11 @@ export default function AnalyticsPage() {
       }));
   }, [globalPayments]);
 
+  const hasCollectionData = useMemo(
+    () => collectionShareData.some((entry) => entry.value > 0),
+    [collectionShareData],
+  );
+
   const topHostelChartData = useMemo(() => {
     const hostels = globalPayments?.hostels ?? [];
     return hostels
@@ -373,7 +378,7 @@ export default function AnalyticsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="h-80">
-              {collectionShareData.length ? (
+              {collectionShareData.length && hasCollectionData ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -398,7 +403,11 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  {isFinancialLoading ? 'Loading collection insights...' : 'No collection data yet.'}
+                  {isFinancialLoading
+                    ? 'Loading collection insights...'
+                    : collectionShareData.length
+                      ? 'Collections exist, but every hostel is still at UGX 0. Record payments to unlock contribution insights.'
+                      : 'No collection data yet.'}
                 </div>
               )}
             </CardContent>
@@ -519,7 +528,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        {!!topHostelList.length && (
+        {!!topHostelList.length && hasCollectionData && (
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-gray-900">
