@@ -1,44 +1,54 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { SemesterSelector } from '@/components/SemesterSelector';
-import { Users, Search, Mail, Calendar, UserPlus, Bed, Edit, Trash2, Eye } from 'lucide-react';
+import { Users, Search, Mail, Calendar, UserPlus, Edit, Trash2, Eye, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNavigate } from 'react-router-dom';
 
 interface Student {
   id: number;
   name: string;
   email: string;
-  role: string;
   created_at: string;
 }
 
-interface Room {
+interface SemesterSummary {
   id: number;
-  room_number: string;
-  price: number;
+  name: string;
+  academic_year: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: string | null;
+  active_students: number;
+  total_students: number;
 }
 
 export default function StudentsPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  const [semesterSummaries, setSemesterSummaries] = useState<SemesterSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState('');
+  const [summaryError, setSummaryError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+  const [selectedSemesterLabel, setSelectedSemesterLabel] = useState('All semesters');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
@@ -53,33 +63,50 @@ export default function StudentsPage() {
     phone: '',
     whatsapp: '',
     emergency_contact: '',
-    room_id: '',
-    initial_payment_amount: '',
     currency: 'UGX'
   });
   const limit = 20;
 
   useEffect(() => {
     if (user?.hostel_id) {
+      fetchSemesterSummaries();
+    }
+  }, [user?.hostel_id]);
+
+  useEffect(() => {
+    if (user?.hostel_id) {
       fetchStudents();
-      fetchAvailableRooms();
     }
   }, [user, page, selectedSemesterId]);
 
-  const fetchAvailableRooms = async () => {
+  useEffect(() => {
+    setPage(1);
+  }, [selectedSemesterId]);
+
+  const fetchSemesterSummaries = async () => {
     try {
-      const response = await fetch(API_CONFIG.ENDPOINTS.ROOMS.AVAILABLE, {
+      setSummaryLoading(true);
+      setSummaryError('');
+
+      const response = await fetch(API_CONFIG.ENDPOINTS.STUDENTS.SEMESTER_SUMMARY, {
         headers: getAuthHeaders()
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setRooms(data.data || []);
-        }
+      if (!response.ok) {
+        throw new Error('Failed to load semester summary');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setSemesterSummaries(Array.isArray(data.data) ? data.data : []);
+      } else {
+        throw new Error(data.message || 'Failed to load semester summary');
       }
     } catch (err) {
-      console.error('Error fetching rooms:', err);
+      console.error('Error fetching semester summary:', err);
+      setSummaryError(err instanceof Error ? err.message : 'Failed to load semester summary');
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -113,10 +140,101 @@ export default function StudentsPage() {
     }
   };
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredStudents = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return students;
+    return students.filter((student) => {
+      const nameMatch = student.name?.toLowerCase().includes(query);
+      const emailMatch = student.email?.toLowerCase().includes(query);
+      return nameMatch || emailMatch;
+    });
+  }, [students, searchQuery]);
+
+  const hasSemesterFilter = selectedSemesterId !== null;
+
+  const selectedSemesterSummary = useMemo(() => {
+    if (!hasSemesterFilter) return null;
+    return semesterSummaries.find((summary) => summary.id === selectedSemesterId) || null;
+  }, [hasSemesterFilter, semesterSummaries, selectedSemesterId]);
+
+  const totalActiveStudents = useMemo(
+    () =>
+      semesterSummaries.reduce(
+        (sum, summary) => sum + Number(summary.active_students || 0),
+        0
+      ),
+    [semesterSummaries]
   );
+
+  const totalStudentsAcrossSemesters = useMemo(
+    () =>
+      semesterSummaries.reduce(
+        (sum, summary) => sum + Number(summary.total_students || 0),
+        0
+      ),
+    [semesterSummaries]
+  );
+
+  const formatDateRange = (start: string | null, end: string | null) => {
+    if (!start && !end) return 'Dates TBD';
+    const format = (value: string | null) => (value ? new Date(value).toLocaleDateString() : '—');
+    return `${format(start)} – ${format(end)}`;
+  };
+
+  const handleSemesterChange = (
+    semesterId: number | null,
+    semester?: { name: string; academic_year?: string | null } | null
+  ) => {
+    setSelectedSemesterId(semesterId);
+    if (semesterId === null || !semester) {
+      setSelectedSemesterLabel('All semesters');
+    } else {
+      setSelectedSemesterLabel(`${semester.name} ${semester.academic_year ?? ''}`.trim());
+    }
+  };
+
+  const handleSummaryCardClick = (summary: SemesterSummary) => {
+    handleSemesterChange(summary.id, summary);
+  };
+
+  const handleResetSemesterFilter = () => {
+    handleSemesterChange(null, null);
+  };
+
+  const handleExportCsv = () => {
+    const headers = ['Name', 'Email', 'Registered On'];
+    const rows = filteredStudents.map((student) => [
+      `"${student.name.replace(/"/g, '""')}"`,
+      `"${student.email.replace(/"/g, '""')}"`,
+      new Date(student.created_at).toLocaleDateString(),
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const filenameBase = selectedSemesterLabel.toLowerCase().replace(/\s+/g, '_');
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `students_${filenameBase || 'all'}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const semesterStatusBadgeVariant = (status?: string | null) => {
+    switch ((status || '').toLowerCase()) {
+      case 'active':
+        return 'default';
+      case 'upcoming':
+        return 'secondary';
+      case 'completed':
+        return 'outline';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
 
   const handleEditClick = async (student: Student) => {
     try {
@@ -137,11 +255,9 @@ export default function StudentsPage() {
           phone: fullStudent.profile?.phone || '',
           whatsapp: fullStudent.profile?.whatsapp || '',
           emergency_contact: fullStudent.profile?.emergency_contact || '',
-          room_id: '',
-          initial_payment_amount: '',
           currency: 'UGX'
         });
-        setIsDialogOpen(true);
+        setIsEditDialogOpen(true);
       }
     } catch (err) {
       console.error('Error loading student details:', err);
@@ -155,25 +271,13 @@ export default function StudentsPage() {
       setError('');
       setSuccess('');
 
-      // Validate required fields only for new student creation
       if (!editingStudent) {
-        if (!formData.room_id) {
-          setError('Please select a room for the student');
-          return;
-        }
-        if (!formData.initial_payment_amount || parseFloat(formData.initial_payment_amount) <= 0) {
-          setError('Please enter a booking fee amount');
-          return;
-        }
+        setError('Student registration is handled from the bookings page.');
+        return;
       }
 
-      const url = editingStudent 
-        ? `${API_CONFIG.ENDPOINTS.STUDENTS.UPDATE}/${editingStudent.id}`
-        : API_CONFIG.ENDPOINTS.STUDENTS.CREATE;
-      const method = editingStudent ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.STUDENTS.UPDATE}/${editingStudent.id}`, {
+        method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(formData)
       });
@@ -181,13 +285,13 @@ export default function StudentsPage() {
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || (editingStudent ? 'Failed to update student' : 'Failed to create student'));
+        throw new Error(data.message || 'Failed to update student');
       }
       
       if (data.success) {
-        setIsDialogOpen(false);
+        setIsEditDialogOpen(false);
         setEditingStudent(null);
-        setSuccess(editingStudent ? 'Student updated successfully!' : 'Student registered successfully!');
+        setSuccess('Student updated successfully!');
         setFormData({
           name: '',
           email: '',
@@ -197,18 +301,15 @@ export default function StudentsPage() {
           phone: '',
           whatsapp: '',
           emergency_contact: '',
-          room_id: '',
-          initial_payment_amount: '',
           currency: 'UGX'
         });
         fetchStudents();
-        fetchAvailableRooms(); // Refresh available rooms
       } else {
-        throw new Error(data.message || (editingStudent ? 'Failed to update student' : 'Failed to create student'));
+        throw new Error(data.message || 'Failed to update student');
       }
     } catch (err) {
       console.error('Error submitting student:', err);
-      setError(err instanceof Error ? err.message : (editingStudent ? 'Failed to update student' : 'Failed to create student'));
+      setError(err instanceof Error ? err.message : 'Failed to update student');
     }
   };
 
@@ -285,16 +386,126 @@ export default function StudentsPage() {
             <p className="text-sm md:text-base text-gray-600 mt-2">Manage and view all students in your hostel</p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <SemesterSelector 
+            <SemesterSelector
               hostelId={user.hostel_id}
-              onSemesterChange={setSelectedSemesterId}
+              selectedSemesterId={selectedSemesterId}
+              includeAllOption
+              onSemesterChange={handleSemesterChange}
             />
-            <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={handleExportCsv}
+              disabled={filteredStudents.length === 0}
+              className="w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button
+              onClick={() => navigate('/custodian/bookings?create=1')}
+              className="w-full sm:w-auto"
+            >
               <UserPlus className="h-4 w-4 mr-2" />
-              Register Student
+              New Booking
             </Button>
           </div>
         </div>
+
+        <Card>
+          <CardContent className="pt-6 space-y-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Enrolments by Semester</h2>
+                <p className="text-sm text-gray-600">
+                  Review every cohort in your hostel and tap a semester to drill into the student list.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={hasSemesterFilter ? 'default' : 'outline'} className="uppercase tracking-wide">
+                  {selectedSemesterLabel}
+                </Badge>
+                {hasSemesterFilter && (
+                  <Button variant="outline" size="sm" onClick={handleResetSemesterFilter}>
+                    Clear filter
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium uppercase text-slate-500">Active students</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">{totalActiveStudents}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium uppercase text-slate-500">Total enrolled</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">{totalStudentsAcrossSemesters}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-medium uppercase text-slate-500">Tracked semesters</p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">{semesterSummaries.length}</p>
+              </div>
+            </div>
+
+            {summaryError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{summaryError}</AlertDescription>
+              </Alert>
+            )}
+
+            {summaryLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-indigo-600" />
+              </div>
+            ) : semesterSummaries.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+                No semester enrolments recorded yet. Once bookings are assigned to a semester, they will appear here.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {semesterSummaries.map((summary) => {
+                  const isSelected = selectedSemesterId === summary.id;
+                  return (
+                    <button
+                      type="button"
+                      key={summary.id}
+                      onClick={() => handleSummaryCardClick(summary)}
+                      className={`group h-full rounded-xl border p-5 text-left transition ${
+                        isSelected
+                          ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                          : 'border-slate-200 bg-white hover:border-indigo-200 hover:shadow'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{summary.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {summary.academic_year ? `AY ${summary.academic_year}` : 'Academic year TBD'}
+                          </p>
+                        </div>
+                        <Badge variant={semesterStatusBadgeVariant(summary.status)}>
+                          {summary.status ?? 'unspecified'}
+                        </Badge>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-xs uppercase text-slate-500">Active</p>
+                          <p className="mt-1 text-lg font-semibold text-slate-900">{summary.active_students}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase text-slate-500">Total</p>
+                          <p className="mt-1 text-lg font-semibold text-slate-900">{summary.total_students}</p>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-xs text-slate-500">{formatDateRange(summary.start_date, summary.end_date)}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Success Message */}
         {success && (
@@ -319,6 +530,19 @@ export default function StudentsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <div className="space-y-1">
+          <p className="text-sm text-gray-600">
+            Showing {filteredStudents.length} student{filteredStudents.length === 1 ? '' : 's'}{' '}
+            {hasSemesterFilter ? `for ${selectedSemesterLabel}` : 'across all semesters'}.
+          </p>
+          {hasSemesterFilter && selectedSemesterSummary && (
+            <p className="text-xs text-gray-500">
+              Semester overview: {selectedSemesterSummary.active_students} active enrolments,{' '}
+              {selectedSemesterSummary.total_students} total records.
+            </p>
+          )}
+        </div>
 
         {/* Loading State */}
         {isLoading && (
@@ -441,9 +665,9 @@ export default function StudentsPage() {
           </div>
         )}
 
-        {/* Register Student Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
+        {/* Edit Student Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
           if (!open) {
             setEditingStudent(null);
             setFormData({
@@ -455,20 +679,14 @@ export default function StudentsPage() {
               phone: '',
               whatsapp: '',
               emergency_contact: '',
-              room_id: '',
-              initial_payment_amount: '',
               currency: 'UGX'
             });
           }
         }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingStudent ? 'Edit Student' : 'Register New Student'}</DialogTitle>
-              <DialogDescription>
-                {editingStudent 
-                  ? 'Update student information. All fields marked with * are required.'
-                  : 'Register a new student for this hostel. All fields marked with * are required.'}
-              </DialogDescription>
+              <DialogTitle>Edit Student</DialogTitle>
+              <DialogDescription>Update student information. All fields marked with * are required.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -557,79 +775,16 @@ export default function StudentsPage() {
                 />
               </div>
 
-              {!editingStudent && (
-                <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Bed className="h-4 w-4" />
-                    Room Assignment
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="room_id">Select Room *</Label>
-                      <Select
-                        value={formData.room_id}
-                        onValueChange={(value) => setFormData({ ...formData, room_id: value })}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a room" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {rooms.length === 0 ? (
-                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                              No available rooms
-                            </div>
-                          ) : (
-                            rooms.map((room) => (
-                              <SelectItem key={room.id} value={room.id.toString()}>
-                                {room.room_number} - UGX {room.price.toLocaleString()}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="currency">Currency</Label>
-                      <Select
-                        value={formData.currency}
-                        onValueChange={(value) => setFormData({ ...formData, currency: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="UGX">UGX</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  {formData.room_id && (
-                    <div className="mt-3">
-                      <Label htmlFor="initial_payment_amount">Booking Fee *</Label>
-                      <Input
-                        id="initial_payment_amount"
-                        type="number"
-                        step="0.01"
-                        value={formData.initial_payment_amount}
-                        onChange={(e) => setFormData({ ...formData, initial_payment_amount: e.target.value })}
-                        placeholder="Enter booking fee"
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Every student must pay a booking fee before the next semester
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditingStudent(null);
+                }}>
                   Cancel
                 </Button>
-                <Button type="submit">{editingStudent ? 'Update Student' : 'Register Student'}</Button>
+                <Button type="submit" disabled={!editingStudent}>
+                  Update Student
+                </Button>
               </div>
             </form>
           </DialogContent>

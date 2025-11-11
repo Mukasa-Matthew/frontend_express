@@ -25,6 +25,7 @@ interface Expense {
 
 export default function ExpensesPage(): JSX.Element {
   const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,12 +39,56 @@ export default function ExpensesPage(): JSX.Element {
     category: '',
     description: ''
   });
+  const [hostels, setHostels] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedHostelId, setSelectedHostelId] = useState<string>('');
+
+  const effectiveHostelId = isSuperAdmin
+    ? selectedHostelId
+      ? Number(selectedHostelId)
+      : null
+    : user?.hostel_id ?? null;
 
   useEffect(() => {
-    if (user?.hostel_id) {
+    if (isSuperAdmin) {
+      fetchHostels();
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    if (isSuperAdmin && hostels.length > 0 && !selectedHostelId) {
+      setSelectedHostelId(String(hostels[0].id));
+    }
+  }, [isSuperAdmin, hostels, selectedHostelId]);
+
+  useEffect(() => {
+    if (effectiveHostelId) {
       fetchExpenses();
     }
-  }, [user, selectedSemesterId]);
+  }, [effectiveHostelId, selectedSemesterId]);
+
+  useEffect(() => {
+    setSelectedSemesterId(null);
+  }, [effectiveHostelId]);
+
+  const fetchHostels = async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.LIST}?page=1&limit=200`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (data.success) {
+        setHostels(
+          (data.data || []).map((hostel: any) => ({
+            id: hostel.id,
+            name: hostel.name,
+          })),
+        );
+      }
+    } catch (err) {
+      console.error('Error fetching hostels:', err);
+    }
+  };
 
   const fetchExpenses = async () => {
     try {
@@ -51,10 +96,21 @@ export default function ExpensesPage(): JSX.Element {
       setError('');
       setWarning(null);
 
+      if (!effectiveHostelId) {
+        setExpenses([]);
+        setIsLoading(false);
+        return;
+      }
+
       const buildUrl = (includeSemester: boolean) => {
         const semesterParam =
           includeSemester && selectedSemesterId ? `&semester_id=${selectedSemesterId}` : '';
-        return `${API_CONFIG.ENDPOINTS.EXPENSES.LIST}?page=1&limit=100${semesterParam}`;
+        const params = new URLSearchParams({ page: '1', limit: '100' });
+        if (semesterParam) params.set('semester_id', String(selectedSemesterId));
+        if (isSuperAdmin && effectiveHostelId) {
+          params.set('hostel_id', String(effectiveHostelId));
+        }
+        return `${API_CONFIG.ENDPOINTS.EXPENSES.LIST}?${params.toString()}`;
       };
 
       const runFetch = async (includeSemester: boolean) => {
@@ -103,6 +159,10 @@ export default function ExpensesPage(): JSX.Element {
   };
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSuperAdmin) {
+      setError('Switch to a hostel or custodian account to record expenses.');
+      return;
+    }
     try {
       const response = await fetch(API_CONFIG.ENDPOINTS.EXPENSES.CREATE, {
         method: 'POST',
@@ -138,13 +198,41 @@ export default function ExpensesPage(): JSX.Element {
     0
   );
 
-  if (!user?.hostel_id) {
+  if (!effectiveHostelId) {
     return (
       <Layout>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>No hostel assigned to your account.</AlertDescription>
-        </Alert>
+        <div className="space-y-4">
+          {isSuperAdmin ? (
+            <Alert variant="default">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Select a hostel to review expenses.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>No hostel assigned to your account.</AlertDescription>
+            </Alert>
+          )}
+          {isSuperAdmin && hostels.length > 0 && (
+            <div className="max-w-sm">
+              <Label htmlFor="hostel-select">Hostel</Label>
+              <Select value={selectedHostelId} onValueChange={setSelectedHostelId}>
+                <SelectTrigger id="hostel-select">
+                  <SelectValue placeholder="Choose hostel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hostels.map((hostel) => (
+                    <SelectItem key={hostel.id} value={String(hostel.id)}>
+                      {hostel.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </Layout>
     );
   }
@@ -154,14 +242,33 @@ export default function ExpensesPage(): JSX.Element {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
+          <div className="space-y-2">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Expenses</h1>
-            <p className="text-sm md:text-base text-gray-600 mt-2">Track and manage hostel expenses</p>
+            <p className="text-sm md:text-base text-gray-600 mt-1">Track and manage hostel expenses</p>
+            {isSuperAdmin && (
+              <div className="max-w-sm">
+                <Label htmlFor="hostel-switcher">Hostel</Label>
+                <Select value={selectedHostelId} onValueChange={setSelectedHostelId}>
+                  <SelectTrigger id="hostel-switcher">
+                    <SelectValue placeholder="Choose hostel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hostels.map((hostel) => (
+                      <SelectItem key={hostel.id} value={String(hostel.id)}>
+                        {hostel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-          <SemesterSelector 
-            hostelId={user.hostel_id}
-            onSemesterChange={setSelectedSemesterId}
-          />
+          {effectiveHostelId && (
+            <SemesterSelector 
+              hostelId={effectiveHostelId}
+              onSemesterChange={setSelectedSemesterId}
+            />
+          )}
         </div>
 
         {/* Summary Card */}
@@ -195,10 +302,16 @@ export default function ExpensesPage(): JSX.Element {
               </div>
             </CardContent>
           </Card>
-          <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
-          </Button>
+          {!isSuperAdmin ? (
+            <Button onClick={() => setIsDialogOpen(true)} className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Expense
+            </Button>
+          ) : (
+            <div className="text-xs text-gray-500">
+              Super admins can review expenses. Create and edit from a hostel or custodian account.
+            </div>
+          )}
         </div>
 
         {/* Loading State */}

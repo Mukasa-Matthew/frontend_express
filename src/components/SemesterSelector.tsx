@@ -15,19 +15,26 @@ interface Semester {
 
 interface SemesterSelectorProps {
   hostelId: number | null;
-  onSemesterChange?: (semesterId: number | null) => void;
+  onSemesterChange?: (semesterId: number | null, semester?: Semester | null) => void;
   className?: string;
+  selectedSemesterId?: number | null;
+  includeAllOption?: boolean;
 }
 
 export const SemesterSelector: React.FC<SemesterSelectorProps> = ({
   hostelId,
   onSemesterChange,
-  className
+  className,
+  selectedSemesterId: controlledSemesterId,
+  includeAllOption = false,
 }) => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [currentSemester, setCurrentSemester] = useState<Semester | null>(null);
-  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+  const [internalSelectedId, setInternalSelectedId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isControlled = controlledSemesterId !== undefined;
+  const effectiveSelectedId = isControlled ? controlledSemesterId ?? null : internalSelectedId;
 
   useEffect(() => {
     if (hostelId) {
@@ -36,15 +43,28 @@ export const SemesterSelector: React.FC<SemesterSelectorProps> = ({
     } else {
       setCurrentSemester(null);
       setSemesters([]);
+      if (!isControlled) {
+        setInternalSelectedId(null);
+      }
     }
   }, [hostelId]);
 
   useEffect(() => {
-    if (currentSemester && !selectedSemesterId) {
-      setSelectedSemesterId(currentSemester.id);
-      onSemesterChange?.(currentSemester.id);
+    if (!isControlled && currentSemester && internalSelectedId === null && !includeAllOption) {
+      setInternalSelectedId(currentSemester.id);
+      onSemesterChange?.(currentSemester.id, currentSemester);
     }
-  }, [currentSemester]);
+  }, [currentSemester, internalSelectedId, isControlled, includeAllOption, onSemesterChange]);
+
+  useEffect(() => {
+    if (isControlled) {
+      // No need to sync internal state when component is controlled
+      return;
+    }
+    if (controlledSemesterId !== undefined) {
+      setInternalSelectedId(controlledSemesterId ?? null);
+    }
+  }, [controlledSemesterId, isControlled]);
 
   const fetchCurrentSemester = async () => {
     if (!hostelId) return;
@@ -83,15 +103,41 @@ export const SemesterSelector: React.FC<SemesterSelectorProps> = ({
     }
   };
 
+  const resolveSemesterById = (id: number | null): Semester | null => {
+    if (id === null) return null;
+    if (currentSemester && currentSemester.id === id) {
+      return currentSemester;
+    }
+    return semesters.find((s) => s.id === id) ?? null;
+  };
+
   const handleChange = (value: string) => {
-    const semesterId = value === 'current' ? null : parseInt(value);
-    setSelectedSemesterId(semesterId);
-    onSemesterChange?.(semesterId);
+    let nextSemesterId: number | null = null;
+
+    if (value !== 'all') {
+      const parsed = parseInt(value, 10);
+      nextSemesterId = Number.isNaN(parsed) ? null : parsed;
+    }
+
+    if (!isControlled) {
+      setInternalSelectedId(nextSemesterId);
+    }
+
+    onSemesterChange?.(nextSemesterId, resolveSemesterById(nextSemesterId));
   };
 
   if (!hostelId || semesters.length === 0) {
     return null;
   }
+
+  const selectValue =
+    effectiveSelectedId === null
+      ? includeAllOption
+        ? 'all'
+        : currentSemester
+        ? currentSemester.id.toString()
+        : 'all'
+      : effectiveSelectedId.toString();
 
   return (
     <div className={className}>
@@ -99,7 +145,7 @@ export const SemesterSelector: React.FC<SemesterSelectorProps> = ({
         <Calendar className="h-4 w-4 text-gray-600" />
         <label className="text-sm font-medium text-gray-700">Semester:</label>
         <Select
-          value={selectedSemesterId?.toString() || 'current'}
+          value={selectValue}
           onValueChange={handleChange}
           disabled={isLoading}
         >
@@ -107,6 +153,9 @@ export const SemesterSelector: React.FC<SemesterSelectorProps> = ({
             <SelectValue placeholder="Select semester..." />
           </SelectTrigger>
           <SelectContent>
+            {includeAllOption && (
+              <SelectItem value="all">All semesters</SelectItem>
+            )}
             {currentSemester && (
               <SelectItem value={currentSemester.id.toString()}>
                 {currentSemester.name} {currentSemester.academic_year} (Current)

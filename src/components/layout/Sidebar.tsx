@@ -18,7 +18,8 @@ import {
   CreditCard,
   Calendar,
   Mail,
-  DollarSign
+  DollarSign,
+  CalendarPlus2
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -86,6 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Create Hostel', href: '/hostels/create', icon: Plus },
         { name: 'Manage Hostels', href: '/hostels', icon: Building2 },
+        { name: 'Bookings', href: '/bookings', icon: CalendarPlus2 },
         { name: 'Collections', href: '/collections', icon: DollarSign },
         { name: 'Subscription Plans', href: '/subscription-plans', icon: CreditCard },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
@@ -98,6 +100,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     if (user?.role === 'hostel_admin') {
       return [
         { name: 'Dashboard', href: '/hostel-admin/dashboard', icon: LayoutDashboard },
+        { name: 'Bookings', href: '/hostel-admin/bookings', icon: CalendarPlus2 },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
         { name: 'Inventory', href: '/hostel-admin/inventory', icon: Building2 },
         { name: 'Rooms', href: '/hostel-admin/rooms', icon: Building2 },
@@ -111,6 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     if ((user as any)?.role === 'custodian') {
       return [
         { name: 'Dashboard', href: '/custodian/dashboard', icon: LayoutDashboard },
+        { name: 'Bookings', href: '/custodian/bookings', icon: CalendarPlus2 },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
         { name: 'Students', href: '/custodian/students', icon: GraduationCap },
         { name: 'Inventory', href: '/custodian/inventory', icon: Building2 },

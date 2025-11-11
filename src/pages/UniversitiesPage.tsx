@@ -15,6 +15,7 @@ interface University {
   code: string;
   region_id?: number;
   region_name?: string;
+  image_url?: string | null;
   status: string;
   created_at: string;
 }
@@ -31,6 +32,7 @@ export default function UniversitiesPage() {
     name: '',
     code: '',
     region_id: '',
+    image_url: '',
   });
 
   useEffect(() => {
@@ -78,6 +80,7 @@ export default function UniversitiesPage() {
           name: formData.name,
           code: formData.code,
           ...(formData.region_id && { region_id: parseInt(formData.region_id) }),
+          image_url: formData.image_url.trim() || undefined,
         }),
       });
 
@@ -85,7 +88,7 @@ export default function UniversitiesPage() {
 
       if (response.ok && data.success) {
         setShowCreateForm(false);
-        setFormData({ name: '', code: '', region_id: '' });
+        setFormData({ name: '', code: '', region_id: '', image_url: '' });
         fetchUniversities();
       } else {
         setError(data.message || 'Failed to create university');
@@ -103,6 +106,7 @@ export default function UniversitiesPage() {
       name: university.name,
       code: university.code,
       region_id: university.region_id?.toString() || '',
+      image_url: university.image_url || '',
     });
     setShowCreateForm(false);
   };
@@ -122,6 +126,10 @@ export default function UniversitiesPage() {
           name: formData.name,
           code: formData.code,
           ...(formData.region_id && { region_id: parseInt(formData.region_id) }),
+          image_url:
+            formData.image_url.trim() === ''
+              ? null
+              : formData.image_url.trim(),
         }),
       });
 
@@ -129,7 +137,7 @@ export default function UniversitiesPage() {
 
       if (response.ok && data.success) {
         setEditingId(null);
-        setFormData({ name: '', code: '', region_id: '' });
+        setFormData({ name: '', code: '', region_id: '', image_url: '' });
         fetchUniversities();
       } else {
         setError(data.message || 'Failed to update university');
@@ -219,6 +227,20 @@ export default function UniversitiesPage() {
                       placeholder="e.g., MAK"
                     />
                   </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="image_url">University Image URL</Label>
+                    <Input
+                      id="image_url"
+                      type="url"
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      placeholder="https://example.com/university-cover.jpg"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Provide a public URL to an image that showcases the university. It will appear on
+                      the student portal.
+                    </p>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button type="submit" disabled={isSubmitting}>
@@ -230,7 +252,7 @@ export default function UniversitiesPage() {
                     onClick={() => {
                       setShowCreateForm(false);
                       setEditingId(null);
-                      setFormData({ name: '', code: '', region_id: '' });
+                      setFormData({ name: '', code: '', region_id: '', image_url: '' });
                     }}
                   >
                     Cancel
@@ -275,6 +297,15 @@ export default function UniversitiesPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
+                      {university.image_url && (
+                        <div className="mb-3 overflow-hidden rounded-md border border-gray-200">
+                          <img
+                            src={university.image_url}
+                            alt={university.name}
+                            className="h-32 w-full object-cover"
+                          />
+                        </div>
+                      )}
                       <CardTitle className="text-lg">{university.name}</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">Code: {university.code}</p>
                     </div>

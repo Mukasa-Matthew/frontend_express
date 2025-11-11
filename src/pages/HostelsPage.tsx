@@ -6,9 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
-import { Building2, Plus, Search, Eye, Trash2, AlertCircle, Clock, Key } from 'lucide-react';
+import { Building2, Plus, Search, Eye, Trash2, AlertCircle, Clock, Key, Power, CalendarPlus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CredentialsDialog } from '@/components/CredentialsDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Hostel {
   id: number;
@@ -41,6 +49,10 @@ export default function HostelsPage() {
   const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [selectedHostel, setSelectedHostel] = useState<{ id: number; name: string; admin?: { name: string; email: string } } | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [hostelToDelete, setHostelToDelete] = useState<Hostel | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Calculate subscription statistics
   const subscriptionStats = {
@@ -90,11 +102,8 @@ export default function HostelsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this hostel? This action cannot be undone.')) {
-      return;
-    }
-
     try {
+      setDeleteLoading(true);
       const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.DELETE}/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
@@ -104,19 +113,123 @@ export default function HostelsPage() {
 
       if (response.ok && data.success) {
         fetchHostels();
+        setDeleteDialogOpen(false);
+        setHostelToDelete(null);
       } else {
         alert(data.message || 'Failed to delete hostel');
       }
     } catch (err) {
       console.error('Error deleting hostel:', err);
       alert('Failed to delete hostel');
+    } finally {
+      setDeleteLoading(false);
     }
+  };
+
+  const handleStartDelete = (hostel: Hostel) => {
+    setHostelToDelete(hostel);
+    setDeleteDialogOpen(true);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
     fetchHostels();
+  };
+
+  const handleToggleStatus = async (hostel: Hostel) => {
+    const nextStatus = hostel.status === 'active' ? 'inactive' : 'active';
+    const confirmationMessage =
+      nextStatus === 'inactive'
+        ? 'Deactivating will immediately block admins and custodians from logging in. Continue?'
+        : 'Activate this hostel account now?';
+
+    if (!confirm(confirmationMessage)) {
+      return;
+    }
+
+    try {
+      setActionLoadingId(hostel.id);
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.STATUS}/${hostel.id}/status`, {
+        method: 'PATCH',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.message || 'Failed to update hostel status');
+        return;
+      }
+      fetchHostels();
+    } catch (err) {
+      console.error('Error updating hostel status:', err);
+      alert('Failed to update hostel status');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleExtendSubscription = async (hostel: Hostel) => {
+    if (!hostel.subscription) {
+      alert('This hostel does not have an active subscription to extend.');
+      return;
+    }
+
+    const input = prompt(
+      'Enter new end date (YYYY-MM-DD) or number of extra days prefixed with + (e.g. +30):',
+      ''
+    );
+
+    if (!input) {
+      return;
+    }
+
+    const trimmed = input.trim();
+    const payload: Record<string, any> = {};
+
+    if (trimmed.startsWith('+')) {
+      const days = parseInt(trimmed.replace('+', ''), 10);
+      if (Number.isNaN(days) || days <= 0) {
+        alert('Enter a positive number of days, e.g. +30');
+        return;
+      }
+      payload.additional_days = days;
+    } else {
+      payload.new_end_date = trimmed;
+    }
+
+    try {
+      setActionLoadingId(hostel.id);
+      const response = await fetch(
+        `${API_CONFIG.ENDPOINTS.HOSTELS.EXTEND_SUBSCRIPTION}/${hostel.id}/subscription/extend`,
+        {
+          method: 'POST',
+          headers: {
+            ...getAuthHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        alert(data.message || 'Failed to extend subscription');
+        return;
+      }
+
+      alert('Subscription extended successfully');
+      fetchHostels();
+    } catch (err) {
+      console.error('Error extending subscription:', err);
+      alert('Failed to extend subscription');
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const handleViewCredentials = async (hostelId: number) => {
@@ -446,7 +559,27 @@ export default function HostelsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(hostel.id)}
+                      onClick={() => handleExtendSubscription(hostel)}
+                      disabled={actionLoadingId === hostel.id}
+                      title="Extend current subscription end date"
+                    >
+                      <CalendarPlus className="h-4 w-4 mr-1" />
+                      Extend
+                    </Button>
+                    <Button
+                      variant={hostel.status === 'active' ? 'destructive' : 'outline'}
+                      size="sm"
+                      onClick={() => handleToggleStatus(hostel)}
+                      disabled={actionLoadingId === hostel.id}
+                      title={hostel.status === 'active' ? 'Deactivate hostel' : 'Activate hostel'}
+                    >
+                      <Power className="h-4 w-4 mr-1" />
+                      {hostel.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleStartDelete(hostel)}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -495,6 +628,45 @@ export default function HostelsPage() {
         userName={selectedHostel?.admin?.name}
         userEmail={selectedHostel?.admin?.email}
       />
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setHostelToDelete(null);
+            setDeleteLoading(false);
+          }
+          setDeleteDialogOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete hostel?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove {hostelToDelete?.name ?? 'this hostel'} and every associated record (custodians, admins,
+              subscriptions, bookings, payments, expenses, audit history). This action cannot be undone. Confirm to proceed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => hostelToDelete && handleDelete(hostelToDelete.id)}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Deleting…' : 'Confirm delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

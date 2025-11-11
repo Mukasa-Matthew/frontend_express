@@ -14,7 +14,7 @@ import {
   Building2, Mail, Phone, MapPin, Users, Bed, Calendar, AlertCircle, ArrowLeft,
   Upload, X, Star, Image as ImageIcon, Globe, Map, Save, Loader2, Key, CreditCard
 } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Hostel {
   id: number;
@@ -48,6 +48,11 @@ interface Hostel {
     start_date: string;
     end_date: string;
     amount_paid?: number;
+  };
+  room_stats?: {
+    min_price?: number | null;
+    max_price?: number | null;
+    avg_price?: number | null;
   };
 }
 
@@ -90,6 +95,7 @@ const [distanceInput, setDistanceInput] = useState('');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const publicDetailsRef = useRef<HTMLDivElement>(null);
+const publishSettingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -219,6 +225,19 @@ const [distanceInput, setDistanceInput] = useState('');
     }, 400);
   };
 
+  const scrollToPublishSettings = () => {
+    if (typeof window === 'undefined') return;
+
+    if (publishSettingsRef.current) {
+      publishSettingsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    window.setTimeout(() => {
+      const publishToggle = document.getElementById('is_published') as HTMLInputElement | null;
+      publishToggle?.focus({ preventScroll: true });
+    }, 400);
+  };
+
   const handleDeleteImage = async (imageId: number) => {
     if (!id || !confirm('Are you sure you want to delete this image?')) return;
 
@@ -264,16 +283,24 @@ const [distanceInput, setDistanceInput] = useState('');
     }
   };
 
-  const handleSaveLocationAndPublish = async () => {
+  const handleSaveLocationAndPublish = async (overridePublished?: boolean) => {
     if (!id) return;
 
     try {
       setSaving(true);
-      
-      const updateData: any = {};
-      if (latitude) updateData.latitude = parseFloat(latitude);
-      if (longitude) updateData.longitude = parseFloat(longitude);
-      updateData.is_published = isPublished;
+      const publishState =
+        typeof overridePublished === 'boolean' ? overridePublished : isPublished;
+
+      if (publishState && (!latitude.trim() || !longitude.trim())) {
+        alert('Please enter both latitude and longitude before publishing.');
+        setSaving(false);
+        return;
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (latitude.trim() !== '') updateData.latitude = parseFloat(latitude);
+      if (longitude.trim() !== '') updateData.longitude = parseFloat(longitude);
+      updateData.is_published = publishState;
 
       const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.PUBLISH}/${id}/publish`, {
         method: 'PUT',
@@ -285,6 +312,7 @@ const [distanceInput, setDistanceInput] = useState('');
 
       if (response.ok && data.success) {
         await fetchHostel();
+        setIsPublished(publishState);
         alert('Hostel updated successfully');
       } else {
         alert(data.message || 'Failed to update hostel');
@@ -295,6 +323,24 @@ const [distanceInput, setDistanceInput] = useState('');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePublishNow = async () => {
+    const hasCoordinates = latitude.trim() !== '' && longitude.trim() !== '';
+    if (!hasCoordinates) {
+      alert('Add the hostel latitude and longitude before publishing.');
+      scrollToPublishSettings();
+      return;
+    }
+    await handleSaveLocationAndPublish(true);
+  };
+
+  const handleUnpublish = async () => {
+    const confirmed = confirm(
+      'Unpublish this hostel? Students will no longer see it on the public site.'
+    );
+    if (!confirmed) return;
+    await handleSaveLocationAndPublish(false);
   };
 
   const handleSavePublicDetails = async () => {
@@ -500,6 +546,60 @@ const [distanceInput, setDistanceInput] = useState('');
           </p>
         </div>
 
+        <Alert
+          className={`mb-4 border ${
+            isPublished
+              ? 'border-emerald-200 bg-emerald-50/80 text-emerald-900'
+              : 'border-amber-200 bg-amber-50/80 text-amber-900'
+          }`}
+        >
+          <Globe className={isPublished ? 'text-emerald-500' : 'text-amber-500'} />
+          <div>
+            <AlertTitle>{isPublished ? 'Listing is live' : 'Pending publication'}</AlertTitle>
+            <AlertDescription className="grid gap-3 text-sm text-current">
+              {isPublished
+                ? 'Students can discover and book this hostel on the public site. You can unpublish it at any time from the section below.'
+                : 'Students cannot see or book this hostel yet. Publish it to make the listing visible on the public site.'}
+              <div className="flex flex-wrap gap-2">
+                {isPublished ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={scrollToPublishSettings}
+                      className="w-fit"
+                    >
+                      Update publish settings
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleUnpublish}
+                      className="w-fit text-amber-700 hover:text-amber-900"
+                    >
+                      Unpublish listing
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" onClick={handlePublishNow} className="w-fit">
+                      Publish now
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={scrollToPublishSettings}
+                      className="w-fit text-slate-600 hover:text-slate-900"
+                    >
+                      Review publish settings
+                    </Button>
+                  </>
+                )}
+              </div>
+            </AlertDescription>
+          </div>
+        </Alert>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           {/* Total Rooms */}
           <Card>
@@ -622,6 +722,23 @@ const [distanceInput, setDistanceInput] = useState('');
                     onChange={(e) => setPriceInput(e.target.value)}
                     placeholder="e.g., 550000"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave this blank to let RooMio display the exact price of each room from your Rooms
+                    inventory.
+                  </p>
+                  {hostel?.room_stats && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Current rooms range from{' '}
+                      {typeof hostel.room_stats.min_price === 'number'
+                        ? `UGX ${Number(hostel.room_stats.min_price).toLocaleString()}`
+                        : 'n/a'}{' '}
+                      to{' '}
+                      {typeof hostel.room_stats.max_price === 'number'
+                        ? `UGX ${Number(hostel.room_stats.max_price).toLocaleString()}`
+                        : 'n/a'}{' '}
+                      per semester.
+                    </p>
+                  )}
                 </div>
                 <div id="public-booking-fee">
                   <Label
@@ -783,6 +900,7 @@ const [distanceInput, setDistanceInput] = useState('');
             </Card>
 
             {/* Location & Publish Settings */}
+            <div ref={publishSettingsRef}>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -857,6 +975,7 @@ const [distanceInput, setDistanceInput] = useState('');
                 </Button>
               </CardContent>
             </Card>
+            </div>
           </>
         )}
 

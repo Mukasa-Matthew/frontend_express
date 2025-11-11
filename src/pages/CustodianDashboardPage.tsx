@@ -4,7 +4,16 @@ import { DashboardClock } from '@/components/DashboardClock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Receipt, DollarSign, AlertCircle } from 'lucide-react';
+import {
+  Users,
+  Receipt,
+  DollarSign,
+  AlertCircle,
+  Wallet,
+  Smartphone,
+  PieChart,
+  TrendingUp,
+} from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SemesterSelector } from '@/components/SemesterSelector';
 import SemesterPaymentsSection, {
@@ -17,6 +26,23 @@ interface CustodianStats {
   total_expenses: number;
   total_payments: number;
   outstanding_balance: number;
+  total_expected: number;
+  net_balance: number;
+}
+
+interface PaymentMethodBreakdownItem {
+  method: string;
+  label: string;
+  ledger_total: number;
+  booking_total: number;
+  total: number;
+}
+
+interface PaymentChannelsSummary {
+  items: PaymentMethodBreakdownItem[];
+  combinedTotal: number;
+  ledgerTotal: number;
+  bookingTotal: number;
 }
 
 export default function CustodianDashboardPage() {
@@ -26,6 +52,8 @@ export default function CustodianDashboardPage() {
     total_expenses: 0,
     total_payments: 0,
     outstanding_balance: 0,
+    total_expected: 0,
+    net_balance: 0,
   });
   const [hostelName, setHostelName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +65,12 @@ export default function CustodianDashboardPage() {
   });
   const [isPaymentsLoading, setIsPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [paymentChannels, setPaymentChannels] = useState<PaymentChannelsSummary>({
+    items: [],
+    combinedTotal: 0,
+    ledgerTotal: 0,
+    bookingTotal: 0,
+  });
 
   useEffect(() => {
     if (user && !isLoading) {
@@ -154,20 +188,64 @@ export default function CustodianDashboardPage() {
       });
       let totalPayments = 0;
       let outstandingBalance = 0;
+      let paymentMethodsSummary: PaymentChannelsSummary = {
+        items: [],
+        combinedTotal: 0,
+        ledgerTotal: 0,
+        bookingTotal: 0,
+      };
       if (paymentsResponse.ok) {
         const paymentsData = await paymentsResponse.json();
         if (paymentsData.success && paymentsData.data) {
-          totalPayments = Number(paymentsData.data.total_collected || 0) || 0;
-          outstandingBalance = Number(paymentsData.data.total_outstanding || 0) || 0;
+          totalPayments = Number(paymentsData.data.total_collected ?? 0) || 0;
+          outstandingBalance = Number(paymentsData.data.total_outstanding ?? 0) || 0;
+          const paymentMethodPayload = paymentsData.data.payment_methods;
+          if (paymentMethodPayload) {
+            const rawItems: PaymentMethodBreakdownItem[] = Array.isArray(paymentMethodPayload.items)
+              ? paymentMethodPayload.items.map((item: any) => ({
+                  method: item?.method ?? 'unspecified',
+                  label:
+                    item?.label ??
+                    (item?.method
+                      ? String(item.method).replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+                      : 'Unspecified'),
+                  ledger_total: Number(item?.ledger_total ?? 0) || 0,
+                  booking_total: Number(item?.booking_total ?? 0) || 0,
+                  total: Number(item?.total ?? 0) || 0,
+                }))
+              : [];
+            const ledgerTotal =
+              Number(paymentMethodPayload.ledger_total ?? 0) ||
+              rawItems.reduce((sum, item) => sum + item.ledger_total, 0);
+            const bookingTotal =
+              Number(paymentMethodPayload.booking_total ?? 0) ||
+              rawItems.reduce((sum, item) => sum + item.booking_total, 0);
+            const combinedTotal =
+              Number(paymentMethodPayload.combined_total ?? 0) ||
+              rawItems.reduce((sum, item) => sum + item.total, 0);
+            paymentMethodsSummary = {
+              items: rawItems,
+              combinedTotal,
+              ledgerTotal,
+              bookingTotal,
+            };
+          }
         }
       }
+
+      const rawExpected = totalPayments + outstandingBalance;
+      const totalExpected = Number.isFinite(rawExpected) ? Math.max(rawExpected, 0) : 0;
+      const netBalance = totalPayments - totalExpenses;
 
       setStats({
         total_students: studentsCount,
         total_expenses: totalExpenses,
         total_payments: totalPayments,
         outstanding_balance: outstandingBalance,
+        total_expected: totalExpected,
+        net_balance: netBalance,
       });
+      setPaymentChannels(paymentMethodsSummary);
     } catch (err) {
       console.error('Error fetching custodian stats:', err);
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
@@ -261,6 +339,68 @@ export default function CustodianDashboardPage() {
 
   const displayName = user?.username || user?.name || 'User';
   const greeting = getGreeting();
+  const formatCurrency = (value: number) =>
+    `UGX ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+
+  const getOutstandingMeta = (value: number) => {
+    if (value > 0) {
+      return {
+        badge: 'Action needed',
+        tone: 'text-amber-600',
+        helper: 'Collect this balance to reach the expected total.',
+      };
+    }
+    if (value < 0) {
+      return {
+        badge: 'Over collected',
+        tone: 'text-emerald-600',
+        helper:
+          'Collections are higher than expected. Confirm if room prices or receipts need updating.',
+      };
+    }
+    return {
+      badge: 'On target',
+      tone: 'text-emerald-600',
+      helper: 'Collections and expectations are perfectly aligned.',
+    };
+  };
+
+  const getMethodAccent = (method: string) => {
+    switch (method) {
+      case 'cash':
+        return '#047857'; // emerald-600
+      case 'mobile_money':
+        return '#4338ca'; // indigo-600
+      case 'bank_transfer':
+        return '#1d4ed8'; // blue-600
+      case 'card':
+        return '#7c3aed'; // violet-600
+      default:
+        return '#6b7280'; // gray-500
+    }
+  };
+
+  const outstandingMeta = getOutstandingMeta(stats.outstanding_balance);
+  const expectedRaw = stats.total_payments + stats.outstanding_balance;
+  const expectedLooksOff = expectedRaw < 0;
+  const displayedExpected = stats.total_expected;
+  const combinedChannelTotal =
+    paymentChannels.combinedTotal ||
+    paymentChannels.items.reduce((sum, item) => sum + item.total, 0);
+  const cashCollected =
+    paymentChannels.items.find((item) => item.method === 'cash')?.total ?? 0;
+  const mobileCollected =
+    paymentChannels.items.find((item) => item.method === 'mobile_money')?.total ?? 0;
+  const otherCollected = Math.max(combinedChannelTotal - (cashCollected + mobileCollected), 0);
+  const channelDelta = stats.total_payments - combinedChannelTotal;
+  const channelsAligned = Math.abs(channelDelta) < 1;
+  const netToneClass =
+    stats.net_balance > 0
+      ? 'text-emerald-600'
+      : stats.net_balance < 0
+      ? 'text-rose-600'
+      : 'text-slate-600';
+  const netBadgeText = stats.net_balance >= 0 ? 'Surplus' : 'Deficit';
 
   return (
     <Layout>
@@ -310,73 +450,272 @@ export default function CustodianDashboardPage() {
           </AlertDescription>
         </Alert>
 
-        <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 sm:mx-0 sm:grid sm:grid-cols-2 xl:grid-cols-4 sm:gap-5 md:gap-6">
-          {/* Payments Card */}
-          <Card className="min-w-[240px] border border-emerald-500/20 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0 sm:col-span-2">
+        <div className="-mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1 sm:mx-0 sm:grid sm:grid-cols-2 xl:grid-cols-3 sm:gap-5 md:gap-6">
+          <Card className="min-w-[240px] border border-emerald-500/20 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base font-semibold text-emerald-600 dark:text-emerald-300">
-                Total Collected
+                Total Collections
               </CardTitle>
               <DollarSign className="h-5 w-5 text-emerald-500 dark:text-emerald-300" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-300">
-                UGX {stats.total_payments.toLocaleString()}
+                {formatCurrency(stats.total_payments)}
               </div>
-              <p className="text-xs text-emerald-600/70 dark:text-emerald-200/70 mt-1">
-                Money received this semester
-              </p>
+              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                <p>Cash: {formatCurrency(cashCollected)}</p>
+                <p>Mobile: {formatCurrency(mobileCollected)}</p>
+                {otherCollected > 0 ? <p>Other: {formatCurrency(otherCollected)}</p> : null}
+                {!channelsAligned && (
+                  <p className="text-amber-600">
+                    Reconcile difference: {formatCurrency(channelDelta)}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* Outstanding Balance Card */}
-          <Card className="min-w-[220px] border border-amber-500/25 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0">
+          <Card className="min-w-[220px] border border-slate-200 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base font-semibold text-amber-600 dark:text-amber-300">
-                Outstanding Balance
+              <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-200">
+                Cash Collections
               </CardTitle>
-              <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-300" />
+              <Wallet className="h-5 w-5 text-emerald-500 dark:text-emerald-300" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-600 dark:text-amber-300">
-                UGX {stats.outstanding_balance.toLocaleString()}
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {formatCurrency(cashCollected)}
               </div>
-              <p className="text-xs text-amber-600/70 dark:text-amber-200/70 mt-1">
-                Amount still pending
+              <p className="mt-2 text-xs text-muted-foreground">
+                Desk payments receipted by custodians.
               </p>
             </CardContent>
           </Card>
 
-          {/* Expenses Card */}
-          <Card className="min-w-[220px] snap-start sm:min-w-0">
+          <Card className="min-w-[220px] border border-slate-200 bg-card/90 backdrop-blur-sm snap-start sm:min-w-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-              <Receipt className="h-4 w-4 text-red-500" />
+              <CardTitle className="text-base font-semibold text-slate-700 dark:text-slate-200">
+                Mobile Money
+              </CardTitle>
+              <Smartphone className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                UGX {stats.total_expenses.toLocaleString()}
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {formatCurrency(mobileCollected)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Spend to date</p>
-            </CardContent>
-          </Card>
-
-          {/* Students Card */}
-          <Card className="min-w-[220px] snap-start sm:min-w-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total_students}</div>
-              <p className="text-xs text-muted-foreground mt-1">Currently assigned</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                STK requests and online bookings paid by mobile.
+              </p>
             </CardContent>
           </Card>
         </div>
 
+        <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+          <Card className="border border-emerald-500/15 bg-card/90 backdrop-blur-sm">
+            <CardHeader className="space-y-1">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Financial Snapshot
+                </CardTitle>
+                <span className="text-xs font-medium text-muted-foreground">
+                  Expected = Collected + Outstanding
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Clear totals for {selectedSemesterId ? 'the selected semester filter' : 'your current semester'}.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 bg-background/80 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Wallet className="h-4 w-4 text-primary" />
+                    Total Expected
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold text-foreground">
+                    {formatCurrency(displayedExpected)}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Target based on assigned rooms and bookings.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-background/80 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <DollarSign className="h-4 w-4 text-emerald-500" />
+                    Collected
+                  </div>
+                  <div className="mt-2 text-2xl font-semibold text-emerald-600">
+                    {formatCurrency(stats.total_payments)}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Money received for the same scope.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-background/80 p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                      Outstanding Position
+                    </div>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                      {outstandingMeta.badge}
+                    </span>
+                  </div>
+                  <div className={`mt-2 text-2xl font-semibold ${outstandingMeta.tone}`}>
+                    {formatCurrency(stats.outstanding_balance)}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{outstandingMeta.helper}</p>
+                </div>
+              </div>
+              {expectedLooksOff ? (
+                <div className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Expected totals appear negative. Double-check outstanding balances or update room prices if required.
+                </div>
+              ) : null}
+              <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                Totals combine hostel ledger entries with booking receipts for the same semester filter, so everyone can reconcile easily.
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-6">
+            <Card className="border border-slate-200 bg-card/90">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-foreground">Spend & Net</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Expenses compared against total collections.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-slate-200 bg-background/90 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Receipt className="h-4 w-4 text-rose-500" />
+                    Total Expenses
+                  </div>
+                  <div className="mt-2 text-xl font-semibold text-rose-600">
+                    {formatCurrency(stats.total_expenses)}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Spend logged through expense records and inventory.
+                  </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-background/90 p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      Net Position
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                        stats.net_balance >= 0
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-rose-100 text-rose-700'
+                      }`}
+                    >
+                      {netBadgeText}
+                    </span>
+                  </div>
+                  <div className={`mt-2 text-xl font-semibold ${netToneClass}`}>
+                    {formatCurrency(stats.net_balance)}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {stats.net_balance >= 0
+                      ? 'Positive means collections exceed spend to date.'
+                      : 'Negative means expenses are higher than collections.'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-slate-200 bg-card/90">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold text-foreground">
+                  Students on Record
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg border border-slate-200 bg-background/90 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <Users className="h-4 w-4 text-indigo-500" />
+                    Active Students
+                  </div>
+                  <div className="mt-2 text-2xl font-bold text-foreground">{stats.total_students}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Students currently assigned to rooms for the chosen filter.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="border border-indigo-100 bg-card/90">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-foreground">
+                Payment Channel Breakdown
+              </CardTitle>
+              <PieChart className="h-5 w-5 text-indigo-500" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Track how collections split between cash, mobile money, and other methods.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {paymentChannels.items.length ? (
+              <>
+                {paymentChannels.items.map((channel) => {
+                  const share =
+                    combinedChannelTotal > 0
+                      ? Math.round((channel.total / combinedChannelTotal) * 100)
+                      : 0;
+                  return (
+                    <div
+                      key={channel.method}
+                      className="rounded-lg border border-indigo-100 bg-background/90 p-4 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-foreground">{channel.label}</div>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {share > 0 ? `${share}% of recorded receipts` : '—'}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xl font-semibold text-foreground">
+                        {formatCurrency(channel.total)}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                        <span>Ledger: {formatCurrency(channel.ledger_total)}</span>
+                        <span>Bookings: {formatCurrency(channel.booking_total)}</span>
+                      </div>
+                      <div className="mt-3 h-2 w-full rounded-full bg-muted">
+                        <div
+                          className="h-2 rounded-full"
+                          style={{
+                            width: `${Math.min(share, 100)}%`,
+                            backgroundColor: getMethodAccent(channel.method),
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                  Total recorded through channels: {formatCurrency(combinedChannelTotal)} (ledger{' '}
+                  {formatCurrency(paymentChannels.ledgerTotal)}, bookings{' '}
+                  {formatCurrency(paymentChannels.bookingTotal)}).
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No payment channel information has been captured yet. Record payments to populate this view.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         <SemesterPaymentsSection
           title="Collections by Semester"
-          description="Monitor how much has been collected versus expected for each semester."
+          description="See expected versus collected amounts per semester and spot gaps quickly."
           data={paymentsData}
           loading={isPaymentsLoading}
           error={paymentsError}

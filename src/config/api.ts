@@ -1,5 +1,7 @@
 // API Configuration
 // Get the API URL from environment variable, handle cases where it might have multiple values
+const DEFAULT_PROD_API_URL = 'https://martomor.xyz';
+
 let rawApiUrl = import.meta.env.VITE_API_URL;
 
 const inferApiUrlFromWindow = (): string | null => {
@@ -31,7 +33,7 @@ const inferApiUrlFromWindow = (): string | null => {
 };
 
 if (!rawApiUrl) {
-  rawApiUrl = inferApiUrlFromWindow() || 'http://localhost:5000';
+  rawApiUrl = inferApiUrlFromWindow() || DEFAULT_PROD_API_URL;
 }
 
 // Prevent accidental use of localhost in hosted environments (Chrome blocks loopback from public origins)
@@ -89,6 +91,7 @@ export const API_CONFIG = {
       CREATE: `${API_BASE_URL}/api/students`,
       UPDATE: `${API_BASE_URL}/api/students`,
       DELETE: `${API_BASE_URL}/api/students`,
+      SEMESTER_SUMMARY: `${API_BASE_URL}/api/students/summary/semesters`,
       NOTIFY: `${API_BASE_URL}/api/students/notify`,
     },
     PAYMENTS: {
@@ -126,6 +129,8 @@ export const API_CONFIG = {
       UPDATE: `${API_BASE_URL}/api/hostels`,
       RESEND_ADMIN_CREDENTIALS: `${API_BASE_URL}/api/hostels`,
       VIEW_CREDENTIALS: `${API_BASE_URL}/api/hostels`,
+      STATUS: `${API_BASE_URL}/api/hostels`,
+      EXTEND_SUBSCRIPTION: `${API_BASE_URL}/api/hostels`,
       IMAGES: {
         LIST: `${API_BASE_URL}/api/hostels`,
         UPLOAD: `${API_BASE_URL}/api/hostels`,
@@ -179,6 +184,14 @@ export const API_CONFIG = {
       DROP: `${API_BASE_URL}/api/semesters/enrollments`,
       TRANSFER: `${API_BASE_URL}/api/semesters/enrollments`,
       HOSTEL_SEMESTER_MODE: `${API_BASE_URL}/api/semesters/hostel`,
+    },
+    BOOKINGS: {
+      LIST: `${API_BASE_URL}/api/bookings`,
+      CREATE: `${API_BASE_URL}/api/bookings`,
+      DETAIL: `${API_BASE_URL}/api/bookings`,
+      PAYMENTS: `${API_BASE_URL}/api/bookings`,
+      VERIFY: `${API_BASE_URL}/api/bookings/verify`,
+      CHECK_IN: `${API_BASE_URL}/api/bookings`,
     },
   },
 };
