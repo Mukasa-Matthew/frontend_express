@@ -957,7 +957,7 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
                 </div>
 
                 <Button
-                  onClick={handleSaveLocationAndPublish}
+                  onClick={() => handleSaveLocationAndPublish()}
                   disabled={saving}
                   className="w-full md:w-auto"
                 >
