@@ -182,6 +182,19 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
     const file = e.target.files?.[0];
     if (!file || !id) return;
 
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Please upload a JPEG, PNG, or WebP image.');
+      return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size too large. Maximum size is 10MB.');
+      return;
+    }
+
     try {
       setUploading(true);
       const formData = new FormData();
@@ -194,7 +207,15 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
         body: formData
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error(text || 'Server returned an invalid response');
+      }
 
       if (response.ok && data.success) {
         await fetchImages();
@@ -202,11 +223,14 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
           fileInputRef.current.value = '';
         }
       } else {
-        alert(data.message || 'Failed to upload image');
+        const errorMessage = data.message || `Failed to upload image (${response.status})`;
+        console.error('Upload error:', errorMessage, data);
+        alert(errorMessage);
       }
     } catch (err) {
       console.error('Error uploading image:', err);
-      alert('Failed to upload image');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to upload image. Please check your connection and try again.';
+      alert(errorMessage);
     } finally {
       setUploading(false);
     }
