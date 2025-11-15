@@ -37,9 +37,20 @@ export default function HostelAdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
-  const [financialOverview, setFinancialOverview] = useState<{ total_collected: number; total_outstanding: number }>({
+  const [financialOverview, setFinancialOverview] = useState<{ 
+    total_collected: number; 
+    total_outstanding: number;
+    cash_total: number;
+    mobile_money_total: number;
+    other_methods_total: number;
+    reconciliation_difference: number;
+  }>({
     total_collected: 0,
     total_outstanding: 0,
+    cash_total: 0,
+    mobile_money_total: 0,
+    other_methods_total: 0,
+    reconciliation_difference: 0,
   });
   const [isFinancialLoading, setIsFinancialLoading] = useState(true);
   const [paymentsData, setPaymentsData] = useState<SemesterPaymentsData>({
@@ -183,15 +194,42 @@ export default function HostelAdminDashboardPage() {
         throw new Error(data.message || 'Unable to load payment overview');
       }
 
+      // Extract cash and mobile money totals from payment_methods breakdown
+      const paymentMethods = data.data.payment_methods?.items || [];
+      const cashTotal = paymentMethods
+        .filter((item: any) => item.method === 'cash')
+        .reduce((sum: number, item: any) => sum + Number(item.total || 0), 0);
+      const mobileMoneyTotal = paymentMethods
+        .filter((item: any) => item.method === 'mobile_money')
+        .reduce((sum: number, item: any) => sum + Number(item.total || 0), 0);
+      
+      // Calculate other payment methods total
+      const otherMethodsTotal = paymentMethods
+        .filter((item: any) => item.method !== 'cash' && item.method !== 'mobile_money')
+        .reduce((sum: number, item: any) => sum + Number(item.total || 0), 0);
+      
+      // Calculate reconciliation: cash + mobile + other should equal total_collected
+      const methodBreakdownSum = cashTotal + mobileMoneyTotal + otherMethodsTotal;
+      const totalCollected = Number(data.data.total_collected ?? 0);
+      const reconciliationDifference = totalCollected - methodBreakdownSum;
+
       setFinancialOverview({
-        total_collected: Number(data.data.total_collected ?? 0),
+        total_collected: totalCollected,
         total_outstanding: Number(data.data.total_outstanding ?? 0),
+        cash_total: cashTotal,
+        mobile_money_total: mobileMoneyTotal,
+        other_methods_total: otherMethodsTotal,
+        reconciliation_difference: reconciliationDifference,
       });
     } catch (err) {
       console.error('Error fetching financial overview:', err);
       setFinancialOverview({
         total_collected: 0,
         total_outstanding: 0,
+        cash_total: 0,
+        mobile_money_total: 0,
+        other_methods_total: 0,
+        reconciliation_difference: 0,
       });
     } finally {
       setIsFinancialLoading(false);
@@ -487,7 +525,21 @@ export default function HostelAdminDashboardPage() {
                 <div className="text-3xl font-bold text-green-700">
                   {formatCurrency(financialOverview.total_collected)}
                 </div>
-                <p className="text-xs text-green-700/70 mt-1">Money received for this hostel</p>
+                <div className="mt-3 space-y-2 pt-2 border-t border-green-200">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-green-800 font-medium">Cash:</span>
+                    <span className="text-green-700 font-semibold">
+                      {formatCurrency(financialOverview.cash_total)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-green-800 font-medium">Mobile Money:</span>
+                    <span className="text-green-700 font-semibold">
+                      {formatCurrency(financialOverview.mobile_money_total)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-green-700/70 mt-2">Money received for this hostel</p>
               </CardContent>
             </Card>
 
@@ -602,7 +654,59 @@ export default function HostelAdminDashboardPage() {
                   ? 'Loading...'
                   : formatCurrency(financialOverview.total_collected)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              {!isFinancialLoading && (
+                <div className="mt-3 space-y-1.5 pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Cash:</span>
+                    <span className="font-semibold text-gray-700">
+                      {formatCurrency(financialOverview.cash_total)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Mobile Money:</span>
+                    <span className="font-semibold text-gray-700">
+                      {formatCurrency(financialOverview.mobile_money_total)}
+                    </span>
+                  </div>
+                  {financialOverview.other_methods_total > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Other Methods:</span>
+                      <span className="font-semibold text-gray-700">
+                        {formatCurrency(financialOverview.other_methods_total)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="pt-1.5 mt-1.5 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-muted-foreground">Subtotal (Methods):</span>
+                      <span className="text-gray-900">
+                        {formatCurrency(
+                          financialOverview.cash_total + 
+                          financialOverview.mobile_money_total + 
+                          financialOverview.other_methods_total
+                        )}
+                      </span>
+                    </div>
+                    {Math.abs(financialOverview.reconciliation_difference) > 0.01 && (
+                      <div className={`flex items-center justify-between text-xs mt-1 ${
+                        financialOverview.reconciliation_difference < 0 ? 'text-red-600' : 'text-amber-600'
+                      }`}>
+                        <span>Reconciliation Difference:</span>
+                        <span className="font-semibold">
+                          {formatCurrency(financialOverview.reconciliation_difference)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between text-xs font-bold mt-1 pt-1 border-t border-gray-300">
+                      <span className="text-green-700">Total Collected:</span>
+                      <span className="text-green-700">
+                        {formatCurrency(financialOverview.total_collected)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
                 {selectedSemesterId
                   ? 'Selected semester collections'
                   : 'Current semester collections'}

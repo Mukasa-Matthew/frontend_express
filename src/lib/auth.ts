@@ -108,6 +108,7 @@ export const login = async (
   // Normalize shape
   const token = (data as any).token ?? (data as any).data?.token;
   const user = (data as any).user ?? (data as any).data?.user;
+  const requiresPasswordChange = (data as any).requiresPasswordChange || false;
 
   if (!token || !user) {
     throw new Error('Malformed login response');
@@ -116,7 +117,15 @@ export const login = async (
   // Store token in localStorage
   localStorage.setItem('auth_token', token);
 
-  return user as User;
+  // Store password change requirement flag
+  if (requiresPasswordChange) {
+    localStorage.setItem('requires_password_change', 'true');
+  } else {
+    localStorage.removeItem('requires_password_change');
+  }
+
+  // Add requiresPasswordChange to user object so it can be checked
+  return { ...user, requiresPasswordChange } as User & { requiresPasswordChange?: boolean };
 };
 
 export const logout = async (): Promise<void> => {

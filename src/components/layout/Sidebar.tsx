@@ -19,8 +19,10 @@ import {
   Calendar,
   Mail,
   DollarSign,
-  CalendarPlus2
+  CalendarPlus2,
+  FileText
 } from 'lucide-react';
+import { BookingNotifications } from '@/components/BookingNotifications';
 
 interface SidebarProps {
   className?: string;
@@ -89,6 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         { name: 'Manage Hostels', href: '/hostels', icon: Building2 },
         { name: 'Bookings', href: '/bookings', icon: CalendarPlus2 },
         { name: 'Collections', href: '/collections', icon: DollarSign },
+        { name: 'Audit Logs', href: '/audit-logs', icon: FileText },
         { name: 'Subscription Plans', href: '/subscription-plans', icon: CreditCard },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
         { name: 'Universities', href: '/universities', icon: GraduationCap },
@@ -100,7 +103,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     if (user?.role === 'hostel_admin') {
       return [
         { name: 'Dashboard', href: '/hostel-admin/dashboard', icon: LayoutDashboard },
-        { name: 'Bookings', href: '/hostel-admin/bookings', icon: CalendarPlus2 },
+        { name: 'Students', href: '/hostel-admin/students', icon: GraduationCap },
+        { name: 'Online Bookings', href: '/hostel-admin/online-bookings', icon: CalendarPlus2 },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
         { name: 'Inventory', href: '/hostel-admin/inventory', icon: Building2 },
         { name: 'Rooms', href: '/hostel-admin/rooms', icon: Building2 },
@@ -114,9 +118,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     if ((user as any)?.role === 'custodian') {
       return [
         { name: 'Dashboard', href: '/custodian/dashboard', icon: LayoutDashboard },
+        { name: 'Students', href: '/custodian/students', icon: GraduationCap },
+        { name: 'Online Bookings', href: '/custodian/online-bookings', icon: CalendarPlus2 },
         { name: 'Bookings', href: '/custodian/bookings', icon: CalendarPlus2 },
         { name: 'Semesters', href: '/semesters', icon: Calendar },
-        { name: 'Students', href: '/custodian/students', icon: GraduationCap },
         { name: 'Inventory', href: '/custodian/inventory', icon: Building2 },
         { name: 'Expenses', href: '/custodian/expenses', icon: BarChart3 },
         { name: 'Transactions', href: '/custodian/transactions', icon: BarChart3 },
@@ -188,7 +193,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">{getRoleLabel()}</p>
               )}
             </div>
-            <ThemeToggle className="hidden md:inline-flex" />
+            <div className="flex items-center gap-2">
+              <BookingNotifications />
+              <ThemeToggle className="hidden md:inline-flex" />
+            </div>
           </div>
         </div>
 

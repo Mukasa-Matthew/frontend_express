@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { Box, Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,6 +26,7 @@ interface InventoryItem {
 }
 
 export default function InventoryPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -201,10 +203,13 @@ export default function InventoryPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Inventory</h1>
             <p className="text-sm md:text-base text-gray-600 mt-2">Manage hostel inventory items</p>
           </div>
-          <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Item
-          </Button>
+          {/* Only custodians can add inventory items */}
+          {user?.role === 'custodian' && (
+            <Button onClick={() => handleOpenDialog()} className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Item
+            </Button>
+          )}
         </div>
 
         {error && (
@@ -253,25 +258,28 @@ export default function InventoryPage() {
                           <Badge variant={getStatusColor(item.status)}>{item.status}</Badge>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenDialog(item)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDelete(item.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
-                            </Button>
-                          </div>
+                          {/* Only custodians can edit/delete inventory items */}
+                          {user?.role === 'custodian' && (
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenDialog(item)}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(item.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -310,26 +318,29 @@ export default function InventoryPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDialog(item)}
-                          className="flex-1"
-                        >
-                          <Edit className="h-4 w-4 sm:mr-1" />
-                          <span className="hidden sm:inline">Edit</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(item.id)}
-                          className="flex-1 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 sm:mr-1" />
-                          <span className="hidden sm:inline">Delete</span>
-                        </Button>
-                      </div>
+                      {/* Only custodians can edit/delete inventory items */}
+                      {user?.role === 'custodian' && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDialog(item)}
+                            className="flex-1"
+                          >
+                            <Edit className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(item.id)}
+                            className="flex-1 text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

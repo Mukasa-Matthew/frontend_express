@@ -391,8 +391,16 @@ export default function CustodianDashboardPage() {
     paymentChannels.items.find((item) => item.method === 'cash')?.total ?? 0;
   const mobileCollected =
     paymentChannels.items.find((item) => item.method === 'mobile_money')?.total ?? 0;
-  const otherCollected = Math.max(combinedChannelTotal - (cashCollected + mobileCollected), 0);
-  const channelDelta = stats.total_payments - combinedChannelTotal;
+  
+  // Calculate other methods (excluding negative values from reconciliation adjustments)
+  const otherItems = paymentChannels.items.filter(
+    (item) => item.method !== 'cash' && item.method !== 'mobile_money' && item.total > 0
+  );
+  const otherCollected = otherItems.reduce((sum, item) => sum + item.total, 0);
+  
+  // Calculate the actual breakdown total (only positive values)
+  const breakdownTotal = cashCollected + mobileCollected + otherCollected;
+  const channelDelta = stats.total_payments - breakdownTotal;
   const channelsAligned = Math.abs(channelDelta) < 1;
   const netToneClass =
     stats.net_balance > 0
@@ -462,15 +470,51 @@ export default function CustodianDashboardPage() {
               <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-300">
                 {formatCurrency(stats.total_payments)}
               </div>
-              <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                <p>Cash: {formatCurrency(cashCollected)}</p>
-                <p>Mobile: {formatCurrency(mobileCollected)}</p>
-                {otherCollected > 0 ? <p>Other: {formatCurrency(otherCollected)}</p> : null}
-                {!channelsAligned && (
-                  <p className="text-amber-600">
-                    Reconcile difference: {formatCurrency(channelDelta)}
-                  </p>
+              <div className="mt-3 space-y-1.5 pt-2 border-t border-emerald-200">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Cash:</span>
+                  <span className="font-semibold text-emerald-700">
+                    {formatCurrency(cashCollected)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Mobile Money:</span>
+                  <span className="font-semibold text-emerald-700">
+                    {formatCurrency(mobileCollected)}
+                  </span>
+                </div>
+                {otherCollected > 0 && (
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Other Methods:</span>
+                    <span className="font-semibold text-emerald-700">
+                      {formatCurrency(otherCollected)}
+                    </span>
+                  </div>
                 )}
+                <div className="pt-1.5 mt-1.5 border-t border-emerald-200">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-muted-foreground">Subtotal (Methods):</span>
+                    <span className="text-emerald-900">
+                      {formatCurrency(breakdownTotal)}
+                    </span>
+                  </div>
+                  {!channelsAligned && (
+                    <div className={`flex items-center justify-between text-xs mt-1 ${
+                      channelDelta < 0 ? 'text-red-600' : 'text-amber-600'
+                    }`}>
+                      <span>Reconciliation Difference:</span>
+                      <span className="font-semibold">
+                        {formatCurrency(channelDelta)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs font-bold mt-1 pt-1 border-t border-emerald-300">
+                    <span className="text-emerald-700">Total Collected:</span>
+                    <span className="text-emerald-700">
+                      {formatCurrency(stats.total_payments)}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -664,11 +708,13 @@ export default function CustodianDashboardPage() {
           <CardContent className="space-y-4">
             {paymentChannels.items.length ? (
               <>
-                {paymentChannels.items.map((channel) => {
-                  const share =
-                    combinedChannelTotal > 0
-                      ? Math.round((channel.total / combinedChannelTotal) * 100)
-                      : 0;
+                {paymentChannels.items
+                  .filter((channel) => channel.total > 0) // Only show positive values
+                  .map((channel) => {
+                    const share =
+                      breakdownTotal > 0
+                        ? Math.round((channel.total / breakdownTotal) * 100)
+                        : 0;
                   return (
                     <div
                       key={channel.method}
@@ -700,9 +746,15 @@ export default function CustodianDashboardPage() {
                   );
                 })}
                 <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-                  Total recorded through channels: {formatCurrency(combinedChannelTotal)} (ledger{' '}
-                  {formatCurrency(paymentChannels.ledgerTotal)}, bookings{' '}
-                  {formatCurrency(paymentChannels.bookingTotal)}).
+                  <div className="font-semibold mb-1">Breakdown Summary:</div>
+                  <div>Total Collected: {formatCurrency(stats.total_payments)}</div>
+                  <div>From Ledger (on-site): {formatCurrency(paymentChannels.ledgerTotal)}</div>
+                  <div>From Bookings (online): {formatCurrency(paymentChannels.bookingTotal)}</div>
+                  {!channelsAligned && (
+                    <div className="mt-1 text-amber-600">
+                      Note: Small reconciliation differences may occur due to rounding or timing differences.
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

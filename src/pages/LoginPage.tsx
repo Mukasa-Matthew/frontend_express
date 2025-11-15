@@ -40,7 +40,14 @@ export default function LoginPage() {
 
     try {
       // @ts-ignore enhance login to accept captcha when backend requires it
-      await login(identifier, password, captchaToken);
+      const userData = await login(identifier, password, captchaToken);
+      
+      // Check if password change is required
+      if ((userData as any).requiresPasswordChange || localStorage.getItem('requires_password_change') === 'true') {
+        // Redirect to password change page
+        navigate('/change-password?required=true');
+        return;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

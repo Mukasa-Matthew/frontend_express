@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { SemesterSelector } from '@/components/SemesterSelector';
-import { Users, Search, Mail, Calendar, UserPlus, Edit, Trash2, Eye, Download } from 'lucide-react';
+import { Users, Search, Mail, Calendar, UserPlus, Edit, Trash2, Eye, Download, X, ShieldCheck, Phone, MapPin, GraduationCap, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,6 +20,18 @@ interface Student {
   name: string;
   email: string;
   created_at: string;
+  total_amount?: number;
+  amount_paid?: number;
+  balance?: number;
+  payment_count?: number;
+  gender?: string;
+  date_of_birth?: string;
+  access_number?: string;
+  phone?: string;
+  whatsapp?: string;
+  emergency_contact?: string;
+  course?: string;
+  room_number?: string;
 }
 
 interface SemesterSummary {
@@ -54,6 +66,11 @@ export default function StudentsPage() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [viewDetailsDialogOpen, setViewDetailsDialogOpen] = useState(false);
   const [studentToView, setStudentToView] = useState<any>(null);
+  const [verifyCodeDialogOpen, setVerifyCodeDialogOpen] = useState(false);
+  const [verifyCode, setVerifyCode] = useState('');
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [verifyError, setVerifyError] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -98,7 +115,18 @@ export default function StudentsPage() {
 
       const data = await response.json();
       if (data.success) {
-        setSemesterSummaries(Array.isArray(data.data) ? data.data : []);
+        // Map backend response to frontend format
+        const summaries = Array.isArray(data.data) ? data.data.map((item: any) => ({
+          id: item.id || item.semester_id,
+          name: item.name || item.semester_name || 'Unnamed Semester',
+          academic_year: item.academic_year,
+          start_date: item.start_date,
+          end_date: item.end_date,
+          status: item.status || item.semester_status || 'active',
+          active_students: item.active_enrollments || item.active_students || 0,
+          total_students: item.total_enrollments || item.total_students || 0,
+        })) : [];
+        setSemesterSummaries(summaries);
       } else {
         throw new Error(data.message || 'Failed to load semester summary');
       }
@@ -127,8 +155,13 @@ export default function StudentsPage() {
       const data = await response.json();
       if (data.success) {
         setStudents(data.data || []);
-        // Simple pagination calculation - adjust based on your API response
-        setTotalPages(Math.ceil((data.data?.length || 0) / limit) || 1);
+        // Use pagination from API response if available
+        if (data.pagination) {
+          setTotalPages(data.pagination.totalPages || 1);
+        } else {
+          // Fallback calculation
+          setTotalPages(Math.ceil((data.data?.length || 0) / limit) || 1);
+        }
       } else {
         throw new Error(data.message || 'Failed to load students');
       }
@@ -365,6 +398,55 @@ export default function StudentsPage() {
     }
   };
 
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyCode.trim()) {
+      setVerifyError('Please enter a verification code');
+      return;
+    }
+
+    setVerifyLoading(true);
+    setVerifyError('');
+    setVerifyResult(null);
+
+    try {
+      const code = verifyCode.trim().toUpperCase();
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.BOOKINGS.VERIFY}/${code}`, {
+        headers: getAuthHeaders(),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Verification code not found');
+      }
+
+      // If we have a booking, try to find the associated student
+      if (data.data?.student_email) {
+        // Search for student by email
+        const studentResponse = await fetch(
+          `${API_CONFIG.ENDPOINTS.STUDENTS.LIST}?search=${encodeURIComponent(data.data.student_email)}`,
+          { headers: getAuthHeaders() }
+        );
+        const studentData = await studentResponse.json();
+        if (studentData.success && studentData.data?.length > 0) {
+          setVerifyResult({
+            booking: data.data,
+            student: studentData.data[0],
+          });
+        } else {
+          setVerifyResult({ booking: data.data });
+        }
+      } else {
+        setVerifyResult({ booking: data.data });
+      }
+    } catch (err) {
+      console.error('Error verifying code:', err);
+      setVerifyError(err instanceof Error ? err.message : 'Failed to verify code');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
   if (!user?.hostel_id) {
     return (
       <Layout>
@@ -401,15 +483,63 @@ export default function StudentsPage() {
               <Download className="h-4 w-4 mr-2" />
               Export CSV
             </Button>
-            <Button
-              onClick={() => navigate('/custodian/bookings?create=1')}
-              className="w-full sm:w-auto"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              New Booking
-            </Button>
+            {/* Only custodians can create new bookings */}
+            {user?.role === 'custodian' && (
+              <Button
+                onClick={() => {
+                  navigate(`/custodian/bookings?create=1`);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                New Booking
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Prominent Search Bar */}
+        <Card className="border-2 border-primary/20 shadow-md">
+          <CardContent className="pt-6 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search students by name, email, phone, or registration number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-12 text-base border-2 focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              {/* Only custodians can verify codes */}
+              {user?.role === 'custodian' && (
+                <Button
+                  variant="outline"
+                  onClick={() => setVerifyCodeDialogOpen(true)}
+                  className="w-full sm:w-auto border-primary/30 hover:bg-primary/5"
+                >
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Verify Code
+                </Button>
+              )}
+              {searchQuery && (
+                <p className="text-sm text-gray-600 flex items-center">
+                  Found {filteredStudents.length} student{filteredStudents.length === 1 ? '' : 's'} matching "{searchQuery}"
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardContent className="pt-6 space-y-6">
@@ -515,22 +645,6 @@ export default function StudentsPage() {
           </Alert>
         )}
 
-        {/* Search */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search students by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         <div className="space-y-1">
           <p className="text-sm text-gray-600">
             Showing {filteredStudents.length} student{filteredStudents.length === 1 ? '' : 's'}{' '}
@@ -590,18 +704,87 @@ export default function StudentsPage() {
                           <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                             <Users className="h-5 w-5 md:h-6 md:w-6 text-indigo-600" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">{student.name}</h3>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-xs md:text-sm text-gray-600">
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                                <span className="truncate">{student.email}</span>
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                                {new Date(student.created_at).toLocaleDateString()}
-                              </span>
+                          <div className="flex-1 min-w-0 space-y-3">
+                            <div>
+                              <h3 className="text-base md:text-lg font-semibold text-gray-900 truncate">{student.name}</h3>
+                              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs md:text-sm text-gray-600">
+                                <span className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                                  <span className="truncate">{student.email}</span>
+                                </span>
+                                {student.phone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">{student.phone}</span>
+                                  </span>
+                                )}
+                                {student.whatsapp && (
+                                  <span className="flex items-center gap-1">
+                                    <span className="truncate">WhatsApp: {student.whatsapp}</span>
+                                  </span>
+                                )}
+                                {student.access_number && (
+                                  <span className="flex items-center gap-1">
+                                    <GraduationCap className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">{student.access_number}</span>
+                                  </span>
+                                )}
+                                {student.course && (
+                                  <span className="flex items-center gap-1">
+                                    <span className="truncate">{student.course}</span>
+                                  </span>
+                                )}
+                                {student.room_number && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                                    <span className="truncate">Room: {student.room_number}</span>
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                                  {new Date(student.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
                             </div>
+                            
+                            {(student.gender || student.date_of_birth || student.emergency_contact) && (
+                              <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                                {student.gender && (
+                                  <span>Gender: <span className="font-medium capitalize">{student.gender}</span></span>
+                                )}
+                                {student.date_of_birth && (
+                                  <span>DOB: <span className="font-medium">{new Date(student.date_of_birth).toLocaleDateString()}</span></span>
+                                )}
+                                {student.emergency_contact && (
+                                  <span>Emergency: <span className="font-medium">{student.emergency_contact}</span></span>
+                                )}
+                              </div>
+                            )}
+
+                            {(student.balance !== undefined || student.amount_paid !== undefined) && (
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                {student.total_amount !== undefined && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Total: {student.total_amount.toLocaleString()} UGX
+                                  </Badge>
+                                )}
+                                {student.amount_paid !== undefined && (
+                                  <Badge variant="outline" className="text-xs text-green-600">
+                                    Paid: {student.amount_paid.toLocaleString()} UGX
+                                  </Badge>
+                                )}
+                                {student.balance !== undefined && (
+                                  <Badge variant={student.balance > 0 ? "destructive" : "default"} className="text-xs">
+                                    Balance: {student.balance.toLocaleString()} UGX
+                                  </Badge>
+                                )}
+                                {student.payment_count !== undefined && student.payment_count > 0 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {student.payment_count} payment{student.payment_count > 1 ? 's' : ''}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 sm:flex-nowrap">
@@ -623,15 +806,18 @@ export default function StudentsPage() {
                             <Edit className="h-4 w-4 sm:mr-1" />
                             <span className="hidden sm:inline">Edit</span>
                           </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => handleDeleteClick(student)}
-                            className="flex-1 sm:flex-none"
-                          >
-                            <Trash2 className="h-4 w-4 sm:mr-1" />
-                            <span className="hidden sm:inline">Delete</span>
-                          </Button>
+                          {/* Only show delete button for hostel_admin and super_admin */}
+                          {(user?.role === 'hostel_admin' || user?.role === 'super_admin') && (
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDeleteClick(student)}
+                              className="flex-1 sm:flex-none"
+                            >
+                              <Trash2 className="h-4 w-4 sm:mr-1" />
+                              <span className="hidden sm:inline">Delete</span>
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -916,6 +1102,183 @@ export default function StudentsPage() {
                 Close
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Verify Code Dialog */}
+        <Dialog open={verifyCodeDialogOpen} onOpenChange={(open) => {
+          setVerifyCodeDialogOpen(open);
+          if (!open) {
+            setVerifyCode('');
+            setVerifyResult(null);
+            setVerifyError('');
+          }
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Verify Student by Code</DialogTitle>
+              <DialogDescription>
+                Enter a verification code to find and view student booking information
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <div>
+                <Label htmlFor="verifyCode">Verification Code</Label>
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    id="verifyCode"
+                    type="text"
+                    placeholder="Enter verification code (e.g., ABC123)"
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value.toUpperCase())}
+                    className="flex-1 font-mono text-lg tracking-wider"
+                    autoFocus
+                  />
+                  <Button type="submit" disabled={!verifyCode.trim() || verifyLoading}>
+                    {verifyLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="h-4 w-4 mr-2" />
+                        Verify
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {verifyError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{verifyError}</AlertDescription>
+                </Alert>
+              )}
+
+              {verifyResult && (
+                <div className="space-y-4 border-t pt-4">
+                  <h3 className="font-semibold text-lg">Verification Result</h3>
+                  
+                  {verifyResult.booking && (
+                    <div className="space-y-3">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-semibold text-blue-900 mb-2">Booking Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-blue-700 font-medium">Student Name</p>
+                            <p className="text-blue-900">{verifyResult.booking.student_name}</p>
+                          </div>
+                          {verifyResult.booking.student_email && (
+                            <div>
+                              <p className="text-blue-700 font-medium">Email</p>
+                              <p className="text-blue-900">{verifyResult.booking.student_email}</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-blue-700 font-medium">Phone</p>
+                            <p className="text-blue-900">{verifyResult.booking.student_phone}</p>
+                          </div>
+                          {verifyResult.booking.room_number && (
+                            <div>
+                              <p className="text-blue-700 font-medium">Room</p>
+                              <p className="text-blue-900">{verifyResult.booking.room_number}</p>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-blue-700 font-medium">Status</p>
+                            <Badge variant="default">{verifyResult.booking.status}</Badge>
+                          </div>
+                          <div>
+                            <p className="text-blue-700 font-medium">Payment Status</p>
+                            <Badge variant={verifyResult.booking.payment_status === 'paid' ? 'default' : 'outline'}>
+                              {verifyResult.booking.payment_status}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="text-blue-700 font-medium">Amount Paid</p>
+                            <p className="text-blue-900 font-semibold">
+                              {parseFloat(verifyResult.booking.amount_paid || '0').toLocaleString()} {verifyResult.booking.currency || 'UGX'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-blue-700 font-medium">Amount Due</p>
+                            <p className="text-blue-900 font-semibold">
+                              {parseFloat(verifyResult.booking.amount_due || '0').toLocaleString()} {verifyResult.booking.currency || 'UGX'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <p className="text-blue-700 font-medium text-sm">Verification Code</p>
+                          <Badge variant="outline" className="font-mono text-lg mt-1">
+                            {verifyResult.booking.verification_code}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {verifyResult.student && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-900 mb-2">Registered Student Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-green-700 font-medium">Name</p>
+                          <p className="text-green-900">{verifyResult.student.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-green-700 font-medium">Email</p>
+                          <p className="text-green-900">{verifyResult.student.email}</p>
+                        </div>
+                        {verifyResult.student.phone && (
+                          <div>
+                            <p className="text-green-700 font-medium">Phone</p>
+                            <p className="text-green-900">{verifyResult.student.phone}</p>
+                          </div>
+                        )}
+                        {verifyResult.student.access_number && (
+                          <div>
+                            <p className="text-green-700 font-medium">Registration Number</p>
+                            <p className="text-green-900">{verifyResult.student.access_number}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setVerifyCodeDialogOpen(false);
+                            handleViewDetails(verifyResult.student);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Full Student Details
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {verifyResult.booking && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        onClick={() => {
+                          setVerifyCodeDialogOpen(false);
+                          const role = user?.role === 'hostel_admin' ? 'hostel-admin' : 'custodian';
+                          navigate(`/${role}/bookings?highlight=${verifyResult.booking.id}`);
+                        }}
+                        className="flex-1"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Booking Details
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </form>
           </DialogContent>
         </Dialog>
       </div>

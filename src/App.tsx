@@ -32,6 +32,8 @@ import MessagingPage from '@/pages/MessagingPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import SuperAdminCollectionsPage from '@/pages/SuperAdminCollectionsPage';
 import BookingsPage from '@/pages/BookingsPage';
+import OnlineBookingsPage from '@/pages/OnlineBookingsPage';
+import AuditLogsPage from '@/pages/AuditLogsPage';
 
 // Placeholder component for pages that aren't migrated yet
 const PlaceholderPage = ({ pageName }: { pageName: string }) => (
@@ -63,6 +65,7 @@ function App() {
           <Route path="/universities" element={<UniversitiesPage />} />
           <Route path="/subscription-plans" element={<SubscriptionPlansPage />} />
           <Route path="/collections" element={<SuperAdminCollectionsPage />} />
+          <Route path="/audit-logs" element={<AuditLogsPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/semesters" element={<SemesterManagementPage />} />
           <Route path="/semesters/:hostelId?" element={<SemesterManagementPage />} />
@@ -71,6 +74,8 @@ function App() {
           
           {/* Hostel Admin Routes */}
           <Route path="/hostel-admin/dashboard" element={<HostelAdminDashboardPage />} />
+          <Route path="/hostel-admin/students" element={<StudentsPage />} />
+          <Route path="/hostel-admin/online-bookings" element={<OnlineBookingsPage />} />
           <Route path="/hostel-admin/custodians" element={<CustodiansPage />} />
           <Route path="/hostel-admin/rooms" element={<RoomsPage />} />
           <Route path="/hostel-admin/inventory" element={<InventoryPage />} />
@@ -86,6 +91,7 @@ function App() {
           <Route path="/custodian/dashboard" element={<CustodianDashboardPage />} />
           <Route path="/custodian/students" element={<StudentsPage />} />
           <Route path="/custodian/students/:id" element={<PlaceholderPage pageName="Student Details" />} />
+          <Route path="/custodian/online-bookings" element={<OnlineBookingsPage />} />
           <Route path="/custodian/inventory" element={<InventoryPage />} />
           <Route path="/custodian/expenses" element={<ExpensesPage />} />
           <Route path="/custodian/outstanding" element={<OutstandingBalancesPage />} />

@@ -672,8 +672,8 @@ export default function SemesterManagementPage() {
                               : 'Manage semester schedules for your hostel. Create new semesters by selecting a template and providing the academic year and dates.'}
                           </CardDescription>
                         </div>
-                        {/* Only show create button for custodians/hostel admins */}
-                        {!isSuperAdmin && (
+                        {/* Only show create button for custodians (hostel_admin should not create semesters) */}
+                        {!isSuperAdmin && user?.role === 'custodian' && (
                         <Dialog 
                           open={isHostelDialogOpen} 
                           onOpenChange={(open) => {

@@ -193,6 +193,9 @@ export const API_CONFIG = {
       VERIFY: `${API_BASE_URL}/api/bookings/verify`,
       CHECK_IN: `${API_BASE_URL}/api/bookings`,
     },
+    AUDIT_LOGS: {
+      LIST: `${API_BASE_URL}/api/audit-logs`,
+    },
   },
 };
 

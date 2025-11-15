@@ -1126,17 +1126,22 @@ const BookingsPage = () => {
                 </SelectContent>
               </Select>
             )}
-            <Button variant="secondary" onClick={handleOpenVerifyDialog} disabled={!canManageBookings}>
-              <QrCode className="h-4 w-4 mr-2" />
-              Verify code
-            </Button>
+            {/* Only custodians can verify codes and create bookings */}
+            {user?.role === 'custodian' && (
+              <>
+                <Button variant="secondary" onClick={handleOpenVerifyDialog} disabled={!canManageBookings}>
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Verify code
+                </Button>
+                <Button onClick={handleOpenCreate}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Booking
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={fetchBookings}>
               <RefreshCcw className="h-4 w-4 mr-2" />
               Refresh
-            </Button>
-            <Button onClick={handleOpenCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Booking
             </Button>
           </div>
         </div>
@@ -1379,14 +1384,17 @@ const BookingsPage = () => {
                             </div>
                           </td>
                           <td className="px-4 py-4 text-right space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openPaymentDialog(booking)}
-                            >
-                              <DollarSign className="h-4 w-4 mr-1" />
-                              Record payment
-                            </Button>
+                            {/* Only custodians can record payments */}
+                            {user?.role === 'custodian' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openPaymentDialog(booking)}
+                              >
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                Record payment
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1524,28 +1532,31 @@ const BookingsPage = () => {
                     <AlertDescription>{checkInMessage}</AlertDescription>
                   </Alert>
                 )}
-                <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleVerifyRecordPayment(verifyResult)}
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Record payment
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={handleVerifyCheckIn}
-                    disabled={!verifyCanCheckIn || checkInLoading}
-                  >
-                    {checkInLoading ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Mark as checked in
-                  </Button>
-                </div>
+                {/* Only custodians can record payments and check in bookings */}
+                {user?.role === 'custodian' && (
+                  <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleVerifyRecordPayment(verifyResult)}
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Record payment
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleVerifyCheckIn}
+                      disabled={!verifyCanCheckIn || checkInLoading}
+                    >
+                      {checkInLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                      )}
+                      Mark as checked in
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </form>
