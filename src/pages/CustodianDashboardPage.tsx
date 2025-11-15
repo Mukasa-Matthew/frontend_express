@@ -384,9 +384,6 @@ export default function CustodianDashboardPage() {
   const expectedRaw = stats.total_payments + stats.outstanding_balance;
   const expectedLooksOff = expectedRaw < 0;
   const displayedExpected = stats.total_expected;
-  const combinedChannelTotal =
-    paymentChannels.combinedTotal ||
-    paymentChannels.items.reduce((sum, item) => sum + item.total, 0);
   const cashCollected =
     paymentChannels.items.find((item) => item.method === 'cash')?.total ?? 0;
   const mobileCollected =

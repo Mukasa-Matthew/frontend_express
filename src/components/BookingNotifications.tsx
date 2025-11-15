@@ -101,7 +101,7 @@ export const BookingNotifications: React.FC = () => {
         
         // Sort by created_at (newest first) and limit to 10 most recent
         const sortedBookings = relevantBookings
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .sort((a: Booking, b: Booking) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 10);
         
         setPendingBookings(sortedBookings);

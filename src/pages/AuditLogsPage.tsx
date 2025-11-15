@@ -13,13 +13,10 @@ import {
   FileText, 
   Search, 
   Filter, 
-  Calendar, 
-  User, 
   AlertCircle, 
   ChevronLeft, 
   ChevronRight,
-  RefreshCw,
-  Download
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
