@@ -384,10 +384,12 @@ export default function CustodianDashboardPage() {
   const expectedRaw = stats.total_payments + stats.outstanding_balance;
   const expectedLooksOff = expectedRaw < 0;
   const displayedExpected = stats.total_expected;
+  // Show only desk (ledger) cash on the Cash card
   const cashCollected =
-    paymentChannels.items.find((item) => item.method === 'cash')?.total ?? 0;
+    paymentChannels.items.find((item) => item.method === 'cash')?.ledger_total ?? 0;
+  // Show only online/mobile booking payments on the Mobile Money card
   const mobileCollected =
-    paymentChannels.items.find((item) => item.method === 'mobile_money')?.total ?? 0;
+    paymentChannels.items.find((item) => item.method === 'mobile_money')?.booking_total ?? 0;
   
   // Calculate other methods (excluding negative values from reconciliation adjustments)
   const otherItems = paymentChannels.items.filter(
@@ -773,5 +775,3 @@ export default function CustodianDashboardPage() {
     </Layout>
   );
 }
-
-

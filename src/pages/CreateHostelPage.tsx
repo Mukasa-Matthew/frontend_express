@@ -46,6 +46,8 @@ export default function CreateHostelPage() {
     total_rooms: '',
     available_rooms: '',
     plan_id: '',
+    occupancy_type: '',
+    distance_walk_time: '',
   });
 
   useEffect(() => {
@@ -107,6 +109,8 @@ export default function CreateHostelPage() {
         contact_phone: formData.contact_phone || undefined,
         contact_email: formData.contact_email || undefined,
         university_id: formData.university_id ? parseInt(formData.university_id) : undefined,
+        occupancy_type: formData.occupancy_type || undefined,
+        distance_walk_time: formData.distance_walk_time || undefined,
         admin_name: formData.admin_name,
         admin_email: formData.admin_email,
         admin_phone: formData.admin_phone,
@@ -289,6 +293,40 @@ export default function CreateHostelPage() {
                     onChange={(e) => setFormData({ ...formData, available_rooms: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="occupancy_type">Hostel Type</Label>
+                <Select
+                  value={formData.occupancy_type}
+                  onValueChange={(value) => setFormData({ ...formData, occupancy_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select hostel type (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Boys Hostel</SelectItem>
+                    <SelectItem value="female">Girls Hostel</SelectItem>
+                    <SelectItem value="mixed">Mixed Hostel</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: Specify if this is a boys, girls, or mixed hostel
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="distance_walk_time">Walking Distance</Label>
+                <Input
+                  id="distance_walk_time"
+                  type="text"
+                  value={formData.distance_walk_time}
+                  onChange={(e) => setFormData({ ...formData, distance_walk_time: e.target.value })}
+                  placeholder="e.g., 2 minute walk"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Optional: Describe walking distance from campus (e.g., "2 minute walk", "5 minutes walk")
+                </p>
               </div>
             </CardContent>
           </Card>

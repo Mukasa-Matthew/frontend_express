@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { API_CONFIG, getAuthHeaders } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  AlertCircle,
   Banknote,
   CheckCircle2,
   CircleSlash,
@@ -818,6 +819,35 @@ const BookingsPage = () => {
     }
   };
 
+  const handleVerifyMarkNoShow = async () => {
+    if (!verifyResult || !effectiveHostelId) return;
+    setCheckInLoading(true);
+    setVerifyError(null);
+    setCheckInMessage('');
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/bookings/${verifyResult.id}/mark-no-show`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+      const json = await response.json();
+
+      if (!response.ok || !json?.success) {
+        throw new Error(json?.message || 'Failed to mark booking as no-show.');
+      }
+      const updatedBooking: Booking = json.data
+        ? { ...verifyResult, ...json.data }
+        : verifyResult;
+      setVerifyResult(updatedBooking);
+      setCheckInMessage('Booking marked as no-show.');
+      fetchBookings();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to mark booking as no-show.';
+      setVerifyError(message);
+    } finally {
+      setCheckInLoading(false);
+    }
+  };
+
   const initiateMobilePayment = useCallback(
     async (bookingId: number, amount: number, phone: string, notes?: string) => {
       setMobileRequestError('');
@@ -1555,6 +1585,17 @@ const BookingsPage = () => {
                       )}
                       Mark as checked in
                     </Button>
+                    {verifyResult && verifyResult.status !== 'checked_in' && verifyResult.status !== 'cancelled' && verifyResult.status !== 'no_show' && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleVerifyMarkNoShow}
+                        className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                      >
+                        <AlertCircle className="h-4 w-4 mr-2" />
+                        Mark No-Show
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

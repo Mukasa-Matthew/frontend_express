@@ -71,6 +71,10 @@ export default function StudentsPage() {
   const [verifyResult, setVerifyResult] = useState<any>(null);
   const [verifyError, setVerifyError] = useState('');
   const [verifyLoading, setVerifyLoading] = useState(false);
+  const [issueDialogOpen, setIssueDialogOpen] = useState(false);
+  const [issueEmail, setIssueEmail] = useState('');
+  const [issueLoading, setIssueLoading] = useState(false);
+  const [issuedCreds, setIssuedCreds] = useState<{ username: string; email: string; temporaryPassword: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -532,6 +536,15 @@ export default function StudentsPage() {
                   Verify Code
                 </Button>
               )}
+              {user?.role === 'custodian' && (
+                <Button
+                  onClick={() => { setIssuedCreds(null); setIssueEmail(''); setIssueDialogOpen(true); }}
+                  className="w-full sm:w-auto"
+                  variant="secondary"
+                >
+                  Issue Credentials
+                </Button>
+              )}
               {searchQuery && (
                 <p className="text-sm text-gray-600 flex items-center">
                   Found {filteredStudents.length} student{filteredStudents.length === 1 ? '' : 's'} matching "{searchQuery}"
@@ -637,6 +650,66 @@ export default function StudentsPage() {
           </CardContent>
         </Card>
 
+    {/* Issue Credentials Dialog */}
+    <Dialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Issue Mobile App Credentials</DialogTitle>
+          <DialogDescription>
+            Generate a temporary password and email it to the student. You can also copy it below and share manually.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Label htmlFor="issue-email">Student Email</Label>
+          <Input
+            id="issue-email"
+            type="email"
+            placeholder="student@example.com"
+            value={issueEmail}
+            onChange={(e) => setIssueEmail(e.target.value)}
+          />
+          {issuedCreds && (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
+              <div><span className="font-semibold">Username/Email:</span> {issuedCreds.email}</div>
+              <div><span className="font-semibold">Temporary Password:</span> {issuedCreds.temporaryPassword}</div>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button
+              onClick={async () => {
+                try {
+                  setIssueLoading(true);
+                  setSuccess('');
+                  setError('');
+                  const res = await fetch(`${API_CONFIG.BASE_URL}/api/students/issue-credentials`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ email: issueEmail }),
+                  });
+                  const json = await res.json();
+                  if (!res.ok || !json.success) {
+                    throw new Error(json.message || 'Failed to issue credentials');
+                  }
+                  setIssuedCreds(json.data);
+                  setSuccess('Credentials issued successfully. They were also emailed to the student.');
+                } catch (e: any) {
+                  setError(e.message || 'Failed to issue credentials');
+                } finally {
+                  setIssueLoading(false);
+                }
+              }}
+              disabled={!issueEmail || issueLoading}
+            >
+              {issueLoading ? 'Issuing...' : 'Issue & Email'}
+            </Button>
+            <Button variant="outline" onClick={() => setIssueDialogOpen(false)}>Close</Button>
+          </div>
+          <p className="text-xs text-gray-500">
+            For security, the password above is temporary. The student will be prompted to change it after first login.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
         {/* Success Message */}
         {success && (
           <Alert className="border-green-500 bg-green-50 animate-fade-in">

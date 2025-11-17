@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { API_CONFIG, getAuthHeaders, getAuthHeadersForUpload } from '@/config/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { CredentialsDialog } from '@/components/CredentialsDialog';
@@ -25,6 +26,7 @@ interface Hostel {
   price_per_room?: number | null;
   booking_fee?: number | null;
   distance_from_campus?: number | null;
+  distance_walk_time?: string | null;
   occupancy_type?: 'male' | 'female' | 'mixed' | null;
   status: string;
   total_rooms: number;
@@ -88,6 +90,8 @@ export default function HostelDetailsPage() {
 const [priceInput, setPriceInput] = useState('');
 const [bookingFeeInput, setBookingFeeInput] = useState('');
 const [distanceInput, setDistanceInput] = useState('');
+const [distanceWalkTimeInput, setDistanceWalkTimeInput] = useState('');
+const [occupancyTypeInput, setOccupancyTypeInput] = useState<string>('');
   
   // Credentials state
   const [credentials, setCredentials] = useState<{ username: string; password: string; loginUrl?: string } | null>(null);
@@ -128,6 +132,8 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
           ? hostel.distance_from_campus.toString()
           : ''
       );
+      setDistanceWalkTimeInput(hostel.distance_walk_time || '');
+      setOccupancyTypeInput(hostel.occupancy_type || '');
     }
   }, [hostel]);
 
@@ -412,6 +418,9 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
       } else {
         payload.distance_from_campus = null;
       }
+
+      payload.distance_walk_time = distanceWalkTimeInput.trim() || null;
+      payload.occupancy_type = occupancyTypeInput || null;
 
       const response = await fetch(`${API_CONFIG.ENDPOINTS.HOSTELS.UPDATE}/${id}`, {
         method: 'PUT',
@@ -796,6 +805,41 @@ const publishSettingsRef = useRef<HTMLDivElement>(null);
                     onChange={(e) => setDistanceInput(e.target.value)}
                     placeholder="e.g., 0.5"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="distance_walk_time">Walking Distance</Label>
+                  <Input
+                    id="distance_walk_time"
+                    type="text"
+                    value={distanceWalkTimeInput}
+                    onChange={(e) => setDistanceWalkTimeInput(e.target.value)}
+                    placeholder="e.g., 2 minute walk"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optional: Describe walking distance from campus
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="occupancy_type">Hostel Type</Label>
+                  <Select
+                    value={occupancyTypeInput}
+                    onValueChange={(value) => setOccupancyTypeInput(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select hostel type (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Boys Hostel</SelectItem>
+                      <SelectItem value="female">Girls Hostel</SelectItem>
+                      <SelectItem value="mixed">Mixed Hostel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Optional: Specify if this is a boys, girls, or mixed hostel
+                  </p>
                 </div>
               </div>
 

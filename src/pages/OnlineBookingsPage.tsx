@@ -139,6 +139,8 @@ export default function OnlineBookingsPage() {
         return <Badge variant="default" className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Checked In</Badge>;
       case 'cancelled':
         return <Badge variant="destructive"><AlertCircle className="h-3 w-3 mr-1" />Cancelled</Badge>;
+      case 'no_show':
+        return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300"><AlertCircle className="h-3 w-3 mr-1" />No-Show</Badge>;
       case 'expired':
         return <Badge variant="outline"><AlertCircle className="h-3 w-3 mr-1" />Expired</Badge>;
       default:
@@ -194,6 +196,31 @@ export default function OnlineBookingsPage() {
   const handleAddPayment = (bookingId: number) => {
     const role = user?.role === 'hostel_admin' ? 'hostel-admin' : 'custodian';
     navigate(`/${role}/bookings?payment=${bookingId}`);
+  };
+
+  const handleMarkNoShow = async (bookingId: number) => {
+    if (!confirm('Mark this booking as no-show? This will release the room space and cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_CONFIG.ENDPOINTS.BOOKINGS.CHECK_IN}/${bookingId}/mark-no-show`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Booking marked as no-show. Room space has been released.');
+        fetchBookings(); // Refresh the list
+      } else {
+        alert(data.message || 'Failed to mark booking as no-show');
+      }
+    } catch (err) {
+      console.error('Error marking booking as no-show:', err);
+      alert('Failed to mark booking as no-show');
+    }
   };
 
   if (!user?.hostel_id && (user as any)?.role !== 'custodian') {
@@ -424,7 +451,7 @@ export default function OnlineBookingsPage() {
                             View Details
                           </Button>
                           {/* Only custodians can check in and add payments */}
-                          {user?.role === 'custodian' && booking.status !== 'checked_in' && booking.status !== 'cancelled' && (
+                          {user?.role === 'custodian' && booking.status !== 'checked_in' && booking.status !== 'cancelled' && booking.status !== 'no_show' && (
                             <>
                               <Button
                                 variant="default"
@@ -446,6 +473,15 @@ export default function OnlineBookingsPage() {
                                   Add Payment
                                 </Button>
                               )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMarkNoShow(booking.id)}
+                                className="w-full lg:w-auto border-orange-500 text-orange-600 hover:bg-orange-50"
+                              >
+                                <AlertCircle className="h-4 w-4 mr-2" />
+                                Mark No-Show
+                              </Button>
                             </>
                           )}
                         </div>
